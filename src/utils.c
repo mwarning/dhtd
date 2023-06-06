@@ -19,17 +19,7 @@
 int hex_get_id(uint8_t id[], size_t idsize, const char query[])
 {
 	size_t querysize;
-/*
-	const char *dot;
 
-	// Cut out first domain
-	dot = strchr(query, '.');
-	if (dot) {
-		querysize = dot - &query[0];
-	} else {
-		querysize = strlen(query);
-	}
-*/
 	querysize = strlen(query);
 	if (EXIT_SUCCESS == bytes_from_base32(id, idsize, query, querysize)) {
 		return EXIT_SUCCESS;
@@ -40,6 +30,12 @@ int hex_get_id(uint8_t id[], size_t idsize, const char query[])
 	}
 
 	return EXIT_FAILURE;
+}
+
+int is_hex_id(const char query[])
+{
+	uint8_t id[SHA1_BIN_LENGTH];
+	return hex_get_id(id, sizeof(id), query);
 }
 
 static size_t base16_len(size_t len)

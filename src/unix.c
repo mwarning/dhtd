@@ -55,14 +55,14 @@ void unix_signals(void)
 
 static int is_unix_socket_valid(const char path[])
 {
-	struct sockaddr_un addr;
+	struct sockaddr_un addr = { 0 };
 	int sock;
 	int rc;
 
 	sock = socket(AF_LOCAL, SOCK_STREAM, 0);
 
 	addr.sun_family = AF_LOCAL;
-	strcpy(addr.sun_path, path);
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
 	rc = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
 	close(sock);

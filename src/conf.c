@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
 #include <signal.h>
 #include <limits.h>
@@ -22,7 +23,8 @@
 // Global object variables
 struct gconf_t *gconf = NULL;
 
-static const char *g_announce_args[64] = { 0 };
+static const char *g_announce_args[32] = { 0 };
+static const char *g_search_args[32] = { 0 };
 
 const char *dhtd_version_str = "DHTd v"MAIN_VERSION" ("
 " cmd"
@@ -132,7 +134,7 @@ enum OPCODE {
 	oIpv4,
 	oIpv6,
 	oPort,
-	oLpdAddr,
+	oSearch,
 	oLpdDisable,
 	oServiceInstall,
 	oServiceRemove,
@@ -153,13 +155,14 @@ struct option_t {
 
 static struct option_t g_options[] = {
 	{"--announce", 1, oAnnounce},
+	{"--search", 1, oSearch},
 	{"--pidfile", 1, oPidFile},
 	{"--peerfile", 1, oPeerFile},
 	{"--peer", 1, oPeer},
 	{"--verbosity", 1, oVerbosity},
 #ifdef CMD
 	{"--cmd-disable-stdin", 0, oCmdDisableStdin},
-	{"--cmd-port", 1, oCmdPath},
+	{"--cmd-path", 1, oCmdPath},
 #endif
 	{"--config", 1, oConfig},
 	{"--port", 1, oPort},
@@ -168,7 +171,6 @@ static struct option_t g_options[] = {
 	{"-6", 0, oIpv6},
 	{"--ipv6", 0, oIpv6},
 #ifdef LPD
-	{"--lpd-addr", 1, oLpdAddr},
 	{"--lpd-disable", 0, oLpdDisable},
 #endif
 #ifdef __CYGWIN__
@@ -301,21 +303,19 @@ static int conf_load_file(const char path[])
 }
 
 // Append to an array (assumes there is alway enough space ...)
-static void array_append(const char **array, const char element[])
+static int array_append(const char **array, size_t array_length, const char element[])
 {
-	while (*array) {
-		array++;
+	size_t i = 0;
+
+	while ((i < array_length) && (array != NULL)) {
+		i += 1;
 	}
 
-	*array = strdup(element);
-}
-
-// Free array elements
-static void array_free(const char **array)
-{
-	while (*array) {
-		free((void*) *array);
-		array += 1;
+	if (i < array_length) {
+		array[i] = strdup(element);
+		return EXIT_SUCCESS;
+	} else {
+		return EXIT_FAILURE;
 	}
 }
 
@@ -343,7 +343,24 @@ static int conf_set(const char opt[], const char val[])
 	switch (option->code)
 	{
 	case oAnnounce:
-		array_append(&g_announce_args[0], val);
+		if (EXIT_FAILURE == is_hex_id(val)) {
+			log_error("Invalid announce hash: %s", opt);
+			return EXIT_FAILURE;
+		}
+		if (EXIT_FAILURE == array_append(&g_announce_args[0], ARRAY_SIZE(g_announce_args), val)) {
+			log_error("Too many announce entries");
+			return EXIT_FAILURE;
+		}
+		break;
+	case oSearch:
+		if (EXIT_FAILURE == is_hex_id(val)) {
+			log_error("Invalid search hash: %s", opt);
+			return EXIT_FAILURE;
+		}
+		if (EXIT_FAILURE == array_append(&g_search_args[0], ARRAY_SIZE(g_search_args), val)) {
+			log_error("Too many search entries");
+			return EXIT_FAILURE;
+		}
 		break;
 	case oPidFile:
 		return conf_str(opt, &gconf->pidfile, val);
@@ -368,6 +385,10 @@ static int conf_set(const char opt[], const char val[])
 		gconf->cmd_disable_stdin = 1;
 		break;
 	case oCmdPath:
+		if (strlen(val) > FIELD_SIZEOF(struct sockaddr_un, sun_path) - 1) {
+			log_error("Path too long for %s", opt);
+			return EXIT_FAILURE;
+		}
 		return conf_str(opt, &gconf->cmd_path, val);
 #endif
 	case oConfig:
@@ -424,27 +445,30 @@ static int conf_set(const char opt[], const char val[])
 // Load some values that depend on proper settings
 int conf_load(void)
 {
-	const char **args;
-	int rc = 0;
-
-	args = g_announce_args;
-	while (rc == 0 && *args) {
+	for (size_t i = 0; g_announce_args[i]; i += 1) {
+		const char* arg = g_announce_args[i];
 		uint16_t port = gconf->dht_port;
-		char name[QUERY_MAX_SIZE] = { 0 };
+		char query[QUERY_MAX_SIZE] = { 0 };
 
-		int n = sscanf(*args, "%254[^:]:%hu", name, &port);
+		int n = sscanf(arg, "%254[^:]:%hu", query, &port);
 		if (n == 1 || n == 2) {
-			rc = (EXIT_FAILURE == kad_announce(name, port, LONG_MAX));
+			kad_announce(query, port, LONG_MAX);
 		} else {
-			log_error("Invalid announcement: %s", *args);
-			rc = 1;
+			log_error("Invalid announcement: %s", arg);
 		}
-		args += 1;
 	}
 
-	array_free(&g_announce_args[0]);
+	for (size_t i = 0; g_search_args[i]; i += 1) {
+		const char* arg = g_search_args[i];
 
-	return (rc != 0) ? EXIT_FAILURE : EXIT_SUCCESS;
+		if (is_hex_id(arg)) {
+			kad_search(arg);
+		} else {
+			log_error("Invalid search hash: %s", arg);
+		}
+	}
+
+	return EXIT_SUCCESS;
 }
 
 static struct gconf_t *conf_alloc()

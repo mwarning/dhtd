@@ -47,15 +47,15 @@ DHT blacklist: 0 (max 10)
 Start a query:
 
 ```
-$ dhtd-ctl lookup 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
+$ dhtd-ctl search 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
 Search started.
 ```
-(the id is from a magnet link of a Debian torrent file)
+(the id is from a magnet link of a Debian Linux torrent file)
 
 After a few seconds:
 
 ```
-$ dhtd-ctl lookup 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
+$ dhtd-ctl search 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
 [2a01:e0a:ea:d9d0::1]:24007
 [2a01:e0a:5c4:f490::1]:26915
 [2001:470:8:62b:c41a:db05:69db:bb]:59863
@@ -72,6 +72,9 @@ Or use the `--execute <file>` command line argument to execute a script for each
 
 ## Command Line Arguments
 
+* `--search` *hash*  
+  Search for a hash.  
+  This option may occur multiple times.
 * `--announce` *hash*:*port*  
   Announce a hash and port.  
   This option may occur multiple times.

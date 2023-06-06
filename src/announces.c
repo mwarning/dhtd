@@ -85,9 +85,7 @@ struct value_t *announces_add(const char query[], int port, time_t lifetime)
 	time_t now = time_now_sec();
 
 	// base32 or base64
-	if (ret == EXIT_FAILURE) {
-		ret = hex_get_id(id, sizeof(id), query);
-	}
+	ret = hex_get_id(id, sizeof(id), query);
 
 	if (ret == EXIT_FAILURE) {
 		log_debug("No idea how what method to use for announcement: %s", query);

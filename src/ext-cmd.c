@@ -33,13 +33,13 @@ MAIN_SRVNAME" Control Program - Send commands to a DHTd instance.\n\n"
 static const char* g_server_usage =
 	"Usage:\n"
 	"	status\n"
-	"	lookup <query>\n"
+	"	search <query>\n"
 	"	announce [<query>[:<port>] [<minutes>]]\n"
 	"	ping <addr>\n";
 
 const char* g_server_usage_debug =
 	"	blacklist <addr>\n"
-	"	list blacklist|searches|announcements|nodes"
+	"	list blacklist|searches|announcements|peers"
 	"|constants\n"
 	"	list dht_buckets|dht_searches|dht_storage\n";
 
@@ -133,9 +133,9 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 		if (count == 0) {
 			fprintf(fp, "Failed to parse/resolve address.\n");
 		}
-	} else if (sscanf(request, " lookup%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
-		// lookup hex query
-		search = kad_lookup(query);
+	} else if (sscanf(request, " search%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
+		// search hex query
+		search = kad_search(query);
 
 		if (search) {
 			found = 0;
@@ -183,8 +183,8 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 			kad_debug_blacklist(fp);
 		} else if (match(request, " list%*[ ]constants %n")) {
 			kad_debug_constants(fp);
-		} else if (match(request, " list%*[ ]nodes %n")) {
-			if (kad_export_nodes(fp) == 0) {
+		} else if (match(request, " list%*[ ]peers %n")) {
+			if (kad_export_peers(fp) == 0) {
 				fprintf(fp, "No good nodes found.\n");
 			}
 		} else if (match(request, " list%*[ ]searches %n")) {
@@ -333,7 +333,7 @@ int cmd_client(int argc, char *argv[])
 {
 	char buffer[256];
 	const char *path;
-	struct sockaddr_un addr;
+	struct sockaddr_un addr = { 0 };
 	ssize_t size;
 	size_t pos;
 	int sock;
@@ -363,6 +363,11 @@ int cmd_client(int argc, char *argv[])
 		}
 	}
 
+	if (strlen(path) > FIELD_SIZEOF(struct sockaddr_un, sun_path) - 1) {
+		fprintf(stderr, "Path too long!\n");
+		return EXIT_FAILURE;
+	}
+
 	// Concatenate arguments
 	buffer[0] = ' ';
 	buffer[1] = '\0';
@@ -381,7 +386,7 @@ int cmd_client(int argc, char *argv[])
 	}
 
 	addr.sun_family = AF_LOCAL;
-	strcpy(addr.sun_path, path);
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
 	if (connect(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		fprintf(stderr, "Failed to connect to '%s': %s\n", path, strerror(errno));
@@ -401,8 +406,13 @@ int cmd_client(int argc, char *argv[])
 	}
 #endif
 
-	// Send request
-	send(sock, buffer, strlen(buffer) + 1, 0);
+	// Write request
+	size_t ret = write(sock, buffer, strlen(buffer) + 1);
+
+	if (ret < 0) {
+		fprintf(stderr, "write(): %s\n", strerror(errno));
+		goto error;
+	}
 
 	while (1) {
 		// Receive replies

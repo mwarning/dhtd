@@ -82,14 +82,14 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	switch (event) {
 		case DHT_EVENT_VALUES:
 			data4 = (dht_addr4_t *) data;
-			for(i = 0; i < (data_len / sizeof(dht_addr4_t)); ++i) {
+			for (i = 0; i < (data_len / sizeof(dht_addr4_t)); ++i) {
 				to_addr(&addr, &data4[i].addr, 4, data4[i].port);
 				searches_add_addr(search, &addr);
 			}
 			break;
 		case DHT_EVENT_VALUES6:
 			data6 = (dht_addr6_t *) data;
-			for(i = 0; i < (data_len / sizeof(dht_addr6_t)); ++i) {
+			for (i = 0; i < (data_len / sizeof(dht_addr6_t)); ++i) {
 				to_addr(&addr, &data6[i].addr, 16, data6[i].port);
 				searches_add_addr(search, &addr);
 			}
@@ -106,7 +106,7 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 * Lookup in values we announce ourselves.
 * Useful for networks of only one node, also faster.
 */
-void kad_lookup_own_announcements(struct search_t *search)
+void kad_search_own_announcements(struct search_t *search)
 {
 	struct value_t* value;
 	int af;
@@ -267,8 +267,13 @@ int kad_setup(void)
 
 	bytes_random(node_id, SHA1_BIN_LENGTH);
 
-	g_dht_socket4 = net_bind("KAD", "0.0.0.0", gconf->dht_port, gconf->dht_ifname, IPPROTO_UDP);
-	g_dht_socket6 = net_bind("KAD", "::", gconf->dht_port, gconf->dht_ifname, IPPROTO_UDP);
+	if (gconf->af == AF_INET || gconf->af == AF_UNSPEC) {
+		g_dht_socket4 = net_bind("KAD", "0.0.0.0", gconf->dht_port, gconf->dht_ifname, IPPROTO_UDP);
+	}
+
+	if (gconf->af == AF_INET6 || gconf->af == AF_UNSPEC) {
+		g_dht_socket6 = net_bind("KAD", "::", gconf->dht_port, gconf->dht_ifname, IPPROTO_UDP);
+	}
 
 	if (g_dht_socket4 >= 0) {
 		net_add_handler(g_dht_socket4, &dht_handler);
@@ -283,7 +288,7 @@ int kad_setup(void)
 	}
 
 	// Init the DHT.  Also set the sockets into non-blocking mode.
-	if (dht_init(g_dht_socket4, g_dht_socket6, node_id, (uint8_t*) "KN\0\0") < 0) {
+	if (dht_init(g_dht_socket4, g_dht_socket6, node_id, (uint8_t*) "DD\0\0") < 0) {
 		log_error("KAD: Failed to initialize the DHT.");
 		return EXIT_FAILURE;
 	}
@@ -293,7 +298,7 @@ int kad_setup(void)
 
 void kad_free(void)
 {
-	// Nothing to do
+	dht_uninit();
 }
 
 int kad_count_bucket(const struct bucket *bucket, int good)
@@ -398,7 +403,6 @@ int kad_ping(const IP* addr)
 */
 int kad_announce_once(const uint8_t id[], int port)
 {
-
 	if (port < 1 || port > 65535) {
 		log_debug("KAD: Invalid port for announcement: %d", port);
 		return EXIT_FAILURE;
@@ -426,12 +430,12 @@ int kad_announce(const char query[], int port, time_t lifetime)
 	return announces_add(sanitized_query, port, lifetime) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-// Lookup known nodes that are nearest to the given id
-const struct search_t *kad_lookup(const char query[])
+// Search nodes that have announced the same query
+const struct search_t *kad_search(const char query[])
 {
 	struct search_t *search;
 
-	log_debug("KAD: lookup: %s", query);
+	log_debug("KAD: search: %s", query);
 
 	// Find existing or create new search
 	search = searches_start(query);
@@ -446,7 +450,7 @@ const struct search_t *kad_lookup(const char query[])
 	if (search->start_time == time_now_sec()) {
 #if 0
 		// Search own announces
-		kad_lookup_own_announcements(search);
+		kad_search_own_announcements(search);
 #endif
 		log_debug("KAD: Start DHT search");
 
@@ -460,11 +464,11 @@ const struct search_t *kad_lookup(const char query[])
 
 #if 0
 /*
-* Lookup the address of the node whose node id matches id.
-* The lookup will be performed on the results of kad_lookup().
+* Search the address of the node whose node id matches id.
+* The search will be performed on the results of kad_search().
 * The port in the returned address refers to the kad instance.
 */
-int kad_lookup_node(const char query[], IP *addr_return)
+int kad_search_node(const char query[], IP *addr_return)
 {
 	uint8_t id[SHA1_BIN_LENGTH];
 	struct search *sr;
@@ -503,8 +507,8 @@ int kad_blacklist(const IP* addr)
 	return EXIT_SUCCESS;
 }
 
-// Export known nodes; the maximum is 200 nodes
-int kad_export_nodes(FILE *fp)
+// Export known peers; the maximum is 200 nodes
+int kad_export_peers(FILE *fp)
 {
 	IP4 addr4[150];
 	IP6 addr6[150];

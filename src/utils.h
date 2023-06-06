@@ -26,6 +26,7 @@
 #define time_now_sec() (gconf->time_now)
 
 
+int is_hex_id(const char query[]);
 int hex_get_id(uint8_t id[], size_t idsize, const char query[]);
 
 int bytes_from_base32(uint8_t dst[], size_t dstsize, const char src[], size_t srcsize);

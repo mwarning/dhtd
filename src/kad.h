@@ -23,10 +23,10 @@ int kad_blacklist(const IP* addr);
 * Lookup the addresses of the nodes who have announced value id.
 * The first call will start the search.
 */
-const struct search_t *kad_lookup(const char query[]);
+const struct search_t *kad_search(const char query[]);
 
-// Export good nodes
-int kad_export_nodes(FILE *fp);
+// Export good peers
+int kad_export_peers(FILE *fp);
 
 // Print status information
 void kad_status(FILE *fp);

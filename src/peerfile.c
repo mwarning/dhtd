@@ -54,7 +54,7 @@ void peerfile_export(void)
 
 	log_info("PEERFILE: Export peers to %s", filename);
 
-	num = kad_export_nodes(fp);
+	num = kad_export_peers(fp);
 	fclose(fp);
 
 	// No peers to export
