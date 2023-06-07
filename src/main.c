@@ -26,7 +26,7 @@
 #endif
 #include "ext-cmd.h"
 
-static int g_pidfile_written = 0;
+static bool g_pidfile_written = false;
 
 
 int main_run(void)
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (gconf->service_start) {
-		gconf->use_syslog = 1;
+		gconf->use_syslog = true;
 
 		// Get dhtd.exe binary lcoation
 		if (GetModuleFileNameA(NULL, path, sizeof(path)) && (p = strrchr(path, '\\'))) {
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (gconf->is_daemon) {
-		gconf->use_syslog = 1;
+		gconf->use_syslog = true;
 
 		// Close pipes
 		fclose(stderr);
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 	// Write pid file
 	if (gconf->pidfile) {
 		unix_write_pidfile(GetCurrentProcessId(), gconf->pidfile);
-		g_pidfile_written = 1;
+		g_pidfile_written = true;
 	}
 
 	// Drop privileges
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (gconf->is_daemon) {
-		gconf->use_syslog = 1;
+		gconf->use_syslog = true;
 
 		// Close pipes
 		fclose(stderr);
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 	// Write pid file
 	if (gconf->pidfile) {
 		unix_write_pidfile(getpid(), gconf->pidfile);
-		g_pidfile_written = 1;
+		g_pidfile_written = true;
 	}
 
 	// Drop privileges

@@ -50,7 +50,7 @@ static int cmd_ping(FILE *fp, const char addr_str[], int af)
 {
 	IP addr;
 
-	if (addr_parse(&addr, addr_str, STR(DHT_PORT), af) == EXIT_SUCCESS) {
+	if (addr_parse(&addr, addr_str, STR(DHT_PORT), af)) {
 		if (kad_ping(&addr) == 0) {
 			fprintf(fp, "Send ping to: %s\n", str_addr(&addr));
 			return 1;
@@ -66,7 +66,7 @@ static void cmd_blacklist(FILE *fp, const char *addr_str)
 {
 	IP addr;
 
-	if (addr_parse(&addr, addr_str, NULL, gconf->af) == 0) {
+	if (addr_parse(&addr, addr_str, NULL, gconf->af)) {
 		kad_blacklist(&addr);
 		fprintf(fp, "Added to blacklist: %s\n", str_addr(&addr));
 	} else {
@@ -289,7 +289,7 @@ int cmd_setup(void)
 
 		net_add_handler(g_cmd_sock, &cmd_server_handler);
 
-		if (gconf->is_daemon == 0 && gconf->cmd_disable_stdin == 0) {
+		if (!gconf->is_daemon && !gconf->cmd_disable_stdin) {
 			fprintf(stdout, "Press Enter for help.\n");
 			net_add_handler(STDIN_FILENO, &cmd_console_handler);
 		}

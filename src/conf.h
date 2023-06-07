@@ -3,6 +3,7 @@
 #define _CONF_H_
 
 #include <time.h>
+#include <stdbool.h>
 #include "main.h"
 
 
@@ -34,16 +35,16 @@ struct gconf_t {
 	char *configfile;
 
 	// Start in Foreground / Background
-	int is_daemon;
+	bool is_daemon;
 
 	// Thread terminator
-	int is_running;
+	bool is_running;
 
 	// Quiet / Verbose / Debug
 	int verbosity;
 
 	// Write log to /var/log/message
-	int use_syslog;
+	bool use_syslog;
 
 	// Net mode (AF_INET / AF_INET6 / AF_UNSPEC)
 	int af;
@@ -59,17 +60,17 @@ struct gconf_t {
 
 #ifdef __CYGWIN__
 	// Start as windows service
-	int service_start;
+	bool service_start;
 #endif
 
 #ifdef LPD
 	// Disable local peer discovery
-	int lpd_disable;
+	bool lpd_disable;
 #endif
 
 #ifdef CMD
 	char *cmd_path;
-	int cmd_disable_stdin;
+	bool cmd_disable_stdin;
 #endif
 };
 

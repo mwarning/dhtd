@@ -128,7 +128,7 @@ struct search_t* searches_start(const char query[])
 		return search;
 	}
 
-	if (EXIT_SUCCESS != hex_get_id(id, sizeof(id), query)) {
+	if (!hex_get_id(id, sizeof(id), query)) {
 		log_debug("Searches: Invalid query %s", query);
 		return NULL;
 	}
