@@ -53,51 +53,17 @@ void unix_signals(void)
 	signal(SIGPIPE, SIG_IGN);
 }
 
-static int is_unix_socket_valid(const char path[])
-{
-	struct sockaddr_un addr = { 0 };
-	int sock;
-	int rc;
-
-	sock = socket(AF_LOCAL, SOCK_STREAM, 0);
-
-	addr.sun_family = AF_LOCAL;
-	strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
-
-	rc = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
-	close(sock);
-
-	return (rc == 0);
-}
-
 int unix_create_unix_socket(const char path[], int *sock_out)
 {
-	struct sockaddr_un addr;
-	struct stat st;
-	char *dir = NULL;
+	struct sockaddr_un addr = {0};
 	int sock = -1;
-	int rc;
 
 	if (path == NULL || strlen(path) == 0) {
 		goto err;
 	}
 
-	dir = dirname(strdup(path));
-
-	if (is_unix_socket_valid(path)) {
-		log_error("Socket already in use: %s", path);
-		goto err;
-	}
-
-	rc = unlink(path);
-	if (rc == 0) {
-		log_warning("Removed stale file: %s", path);
-	}
-
-	// Directory does not exist and cannot be created
-	if (stat(dir, &st) == -1 && mkdir(dir, 0755) != 0) {
-		log_error("Cannot create directory %s %s", dir, strerror(errno));
-		goto err;
+	if (remove(path) == -1 && errno != ENOENT) {
+		log_warning("remove() %s", strerror(errno));
 	}
 
 	sock = socket(AF_LOCAL, SOCK_STREAM, 0);
@@ -106,26 +72,23 @@ int unix_create_unix_socket(const char path[], int *sock_out)
 		goto err;
 	}
 
-	addr.sun_family = AF_LOCAL;
-	strcpy(addr.sun_path, path);
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
 	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) != 0) {
 		log_error("bind() %s %s", path, strerror(errno));
 		goto err;
 	}
 
-	// Try to set ugo+rwx
-	chmod(path, 0777);
-
-	listen(sock, 5);
+	if (listen(sock, 5) == -1) {
+		goto err;
+	}
 
 	*sock_out = sock;
 
 	return EXIT_SUCCESS;
+
 err:
-	if (dir) {
-		free(dir);
-	}
 
 	if (sock >= 0) {
 		unix_remove_unix_socket(path, sock);
