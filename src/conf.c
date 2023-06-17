@@ -302,12 +302,12 @@ static int conf_load_file(const char path[])
 	return EXIT_SUCCESS;
 }
 
-// Append to an array (assumes there is alway enough space ...)
+// Append to an array
 static int array_append(const char **array, size_t array_length, const char element[])
 {
 	size_t i = 0;
 
-	while ((i < array_length) && (array != NULL)) {
+	while ((i < array_length) && (array[i] != NULL)) {
 		i += 1;
 	}
 
