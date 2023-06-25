@@ -33,7 +33,7 @@ MAIN_SRVNAME" Control Program - Send commands to a DHTd instance.\n\n"
 static const char* g_server_usage =
 	"Usage:\n"
 	"	status\n"
-	"	search <query>\n"
+	"	search [start|stop] <query>\n"
 	"	announce [<query>[:<port>] [<minutes>]]\n"
 	"	ping <addr>\n";
 
@@ -51,7 +51,7 @@ static int cmd_ping(FILE *fp, const char addr_str[], int af)
 	IP addr;
 
 	if (addr_parse(&addr, addr_str, STR(DHT_PORT), af)) {
-		if (kad_ping(&addr) == 0) {
+		if (kad_ping(&addr)) {
 			fprintf(fp, "Send ping to: %s\n", str_addr(&addr));
 			return 1;
 		} else {
@@ -77,6 +77,7 @@ static void cmd_blacklist(FILE *fp, const char *addr_str)
 static void cmd_announce(FILE *fp, const char query[], int port, int minutes)
 {
 	time_t lifetime;
+	uint8_t id[SHA1_BIN_LENGTH];
 
 	if (minutes < 0) {
 		lifetime = LONG_MAX;
@@ -90,14 +91,16 @@ static void cmd_announce(FILE *fp, const char query[], int port, int minutes)
 		port = gconf->dht_port;
 	}
 
-	if (EXIT_SUCCESS == kad_announce(query, port, lifetime)) {
+	if (!parse_hex_id(id, sizeof(id), query, strlen(query))) {
+		fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", query);
+	} else if(announces_add(id, port, lifetime)) {
 		if (minutes < 0) {
 			fprintf(fp, "Start regular announcements for the entire run time (port %d).\n", port);
 		} else {
 			fprintf(fp, "Start regular announcements for %d minutes (port %d).\n", minutes, port);
 		}
 	} else {
-		fprintf(fp, "Invalid query: %s (no domain, hex key or hex hash)\n", query);
+		fprintf(fp, "Failed to add announcement.\n");
 	}
 }
 
@@ -113,11 +116,12 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 {
 	const struct search_t *search;
 	const struct result_t *result;
-	const struct value_t *value;
+	const struct announcement_t *value;
 	int minutes;
 	int found;
 	char query[256];
 	char address[256];
+	uint8_t id[SHA1_BIN_LENGTH];
 	int count;
 	int port;
 	char d; // dummy marker
@@ -133,26 +137,40 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 		if (count == 0) {
 			fprintf(fp, "Failed to parse/resolve address.\n");
 		}
-	} else if (sscanf(request, " search%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
-		// search hex query
-		search = kad_search(query);
-
-		if (search) {
-			found = 0;
-			for (result = search->results; result; result = result->next) {
-				fprintf(fp, "%s\n", str_addr(&result->addr));
-				found = 1;
-			}
-
-			if (!found) {
-				if (search->start_time == time_now_sec()) {
-					fprintf(fp, "Search started.\n");
-				} else {
-					fprintf(fp, "Search in progress.\n");
-				}
+	} else if (sscanf(request, " search stop%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
+		if (parse_hex_id(id, sizeof(id), query, strlen(query))) {
+			if (kad_search_stop(id)) {
+				fprintf(fp, "Done.\n");
+			} else {
+				fprintf(fp, "Search does not exist.\n");
 			}
 		} else {
-			fprintf(fp, "Some error occurred.\n");
+			fprintf(fp, "Failed to parse hex id: %s\n", query);
+		}
+	} else if (sscanf(request, " search start%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
+		if (parse_hex_id(id, sizeof(id), query, strlen(query))) {
+			// search hex query
+			search = kad_search_start(id);
+
+			if (search) {
+				found = 0;
+				for (result = search->results; result; result = result->next) {
+					fprintf(fp, "%s\n", str_addr(&result->addr));
+					found = 1;
+				}
+
+				if (!found) {
+					if (search->start_time == time_now_sec()) {
+						fprintf(fp, "Search started.\n");
+					} else {
+						fprintf(fp, "Search in progress.\n");
+					}
+				}
+			} else {
+				fprintf(fp, "Some error occurred.\n");
+			}
+		} else {
+			fprintf(fp, "Failed to parse hex id: %s\n", query);
 		}
 	} else if (match(request, " status %n")) {
 		// Print node id and statistics
@@ -163,7 +181,7 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 		value = announces_get();
 		while (value) {
 			kad_announce_once(value->id, value->port);
-			fprintf(fp, " announce %s:%d\n", &value->query[0], value->port);
+			fprintf(fp, " announce %s:%d\n", str_id(&value->id[0]), value->port);
 			count += 1;
 			value = value->next;
 		}

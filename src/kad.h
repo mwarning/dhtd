@@ -14,16 +14,18 @@ int kad_setup(void);
 void kad_free(void);
 
 // Ping this node to add it to the node table
-int kad_ping(const IP *addr);
+bool kad_ping(const IP *addr);
 
 // Blacklist a specific address
-int kad_blacklist(const IP* addr);
+bool kad_blacklist(const IP* addr);
 
 /*
 * Lookup the addresses of the nodes who have announced value id.
 * The first call will start the search.
 */
-const struct search_t *kad_search(const char query[]);
+const struct search_t *kad_search_start(const uint8_t id[]);
+
+bool kad_search_stop(const uint8_t id[]);
 
 // Export good peers
 int kad_export_peers(FILE *fp);
@@ -32,16 +34,16 @@ int kad_export_peers(FILE *fp);
 void kad_status(FILE *fp);
 
 // Count good or all known peers
-int kad_count_nodes(int good);
+int kad_count_nodes(bool good);
 
 /*
 * Announce that the resource identified by id can
 * be served by this computer using the given port.
 */
-int kad_announce_once(const uint8_t id[], int port);
+bool kad_announce_once(const uint8_t id[], int port);
 
 // Announce query until lifetime expires.
-int kad_announce(const char query[], int port, time_t lifetime);
+bool kad_announce(const uint8_t id[], int port, time_t lifetime);
 
 // Various debug functions
 void kad_debug_buckets(FILE *fp);

@@ -28,7 +28,11 @@
 
 
 bool is_hex_id(const char query[]);
-bool hex_get_id(uint8_t id[], size_t idsize, const char query[]);
+bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize);
+
+// query is "<hex-id>[:<port>]"
+bool is_announcement(const char query[]);
+bool parse_annoucement(uint8_t id[], int *port, const char query[]);
 
 bool bytes_from_base32(uint8_t dst[], size_t dstsize, const char src[], size_t srcsize);
 char *bytes_to_base32(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize);

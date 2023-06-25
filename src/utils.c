@@ -16,11 +16,8 @@
 #include "utils.h"
 
 
-bool hex_get_id(uint8_t id[], size_t idsize, const char query[])
+bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize)
 {
-	size_t querysize;
-
-	querysize = strlen(query);
 	if (bytes_from_base32(id, idsize, query, querysize)) {
 		return true;
 	}
@@ -35,7 +32,30 @@ bool hex_get_id(uint8_t id[], size_t idsize, const char query[])
 bool is_hex_id(const char query[])
 {
 	uint8_t id[SHA1_BIN_LENGTH];
-	return hex_get_id(id, sizeof(id), query);
+	return parse_hex_id(id, sizeof(id), query, strlen(query));
+}
+
+// "<hex-id>[:<port>]"
+bool parse_annoucement(uint8_t id[], int *port, const char query[])
+{
+	const char *beg = query;
+	const char *colon = strchr(beg, ':');
+	size_t len = strlen(query);
+
+	if (colon) {
+		*port = port_parse(colon + 1, -1);
+		len = colon - beg;
+	}
+
+	return parse_hex_id(id, SHA1_BIN_LENGTH, query, len) && (*port != -1);
+}
+
+// "<hex-id>[:<port>]"
+bool is_announcement(const char query[])
+{
+	uint8_t id[SHA1_BIN_LENGTH];
+	int port;
+	return parse_annoucement(id, &port, query);
 }
 
 static size_t base16_len(size_t len)
@@ -311,12 +331,12 @@ int port_random(void)
 }
 
 // Parse a port - treats 0 as valid port
-int port_parse(const char pstr[], int err)
+int port_parse(const char beg[], int err)
 {
-	int port;
-	char c;
-
-	if (pstr && sscanf(pstr, "%d%c", &port, &c) == 1 && port >= 0 && port <= 65535) {
+	char *endptr = NULL;
+	const char *end = beg + strlen(beg);
+	ssize_t port = strtoul(beg, &endptr, 10);
+	if (endptr != beg && endptr == end && (port >= 0 && port <= 65536)) {
 		return port;
 	} else {
 		return err;

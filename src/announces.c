@@ -18,17 +18,17 @@
 
 static time_t g_announces_expire = 0;
 static time_t g_announces_announce = 0;
-static struct value_t *g_values = NULL;
+static struct announcement_t *g_values = NULL;
 
 
-struct value_t* announces_get(void)
+struct announcement_t* announces_get(void)
 {
 	return g_values;
 }
 
-struct value_t* announces_find(const uint8_t id[])
+struct announcement_t* announces_find(const uint8_t id[])
 {
-	struct value_t *value;
+	struct announcement_t *value;
 
 	value = g_values;
 	while (value) {
@@ -42,22 +42,28 @@ struct value_t* announces_find(const uint8_t id[])
 
 void announces_debug(FILE *fp)
 {
-	struct value_t *value;
+	struct announcement_t *value;
 	time_t now;
+	int nodes_counter;
 	int value_counter;
 
 	now = time_now_sec();
 	value_counter = 0;
+	nodes_counter = kad_count_nodes(0);
 	value = g_values;
 
 	fprintf(fp, "Announcements:\n");
 	fprintf(fp, "interval: %dm\n", ANNOUNCES_INTERVAL / 60);
 	while (value) {
-		fprintf(fp, " query: %s\n", value->query);
-		fprintf(fp, "  id: %s\n", str_id(value->id));
+		fprintf(fp, " id: %s\n", str_id(value->id));
 		fprintf(fp, "  port: %d\n", value->port);
 		if (value->refresh < now) {
-			fprintf(fp, "  refresh: now\n");
+			if (nodes_counter > 0) {
+				fprintf(fp, "  refresh: now\n");
+			} else {
+				// no nodes we can announce to
+				fprintf(fp, "  refresh: wait\n");
+			}
 		} else {
 			fprintf(fp, "  refresh: in %ld min\n", (value->refresh - now) / 60);
 		}
@@ -76,29 +82,11 @@ void announces_debug(FILE *fp)
 }
 
 // Announce a sanitized query
-struct value_t *announces_add(const char query[], int port, time_t lifetime)
+struct announcement_t *announces_add(uint8_t id[], int port, time_t lifetime)
 {
-	uint8_t id[SHA1_BIN_LENGTH];
-	struct value_t *cur;
-	struct value_t *new;
+	struct announcement_t *cur;
+	struct announcement_t *new;
 	time_t now = time_now_sec();
-
-	// base32 or base64
-	if (!hex_get_id(id, sizeof(id), query)) {
-		log_debug("No idea how what method to use for announcement: %s", query);
-		return NULL;
-	}
-
-	if (port < 1 || port > 65535) {
-		log_error("Invalid port for announcement: %s (port %d)", query, port);
-		return NULL;
-	}
-
-	if (lifetime < now) {
-		// Invalid lifetime, should not happen.
-		log_error("Announcement can't be in the past");
-		return NULL;
-	}
 
 	// Value already exists - refresh
 	if ((cur = announces_find(id)) != NULL) {
@@ -115,17 +103,16 @@ struct value_t *announces_add(const char query[], int port, time_t lifetime)
 	}
 
 	// Prepend new entry
-	new = (struct value_t*) calloc(1, sizeof(struct value_t));
+	new = (struct announcement_t*) calloc(1, sizeof(struct announcement_t));
 	memcpy(new->id, id, SHA1_BIN_LENGTH);
-	memcpy(new->query, query, strlen(query));
 	new->port = port;
 	new->refresh = now - 1; // Send first announcement as soon as possible
 	new->lifetime = lifetime;
 
 	if (lifetime == LONG_MAX) {
-		log_debug("Add announcement for %s:%hu. Keep alive for entire runtime.", query, port);
+		log_debug("Add announcement for %s:%hu. Keep alive for entire runtime.", str_id(id), port);
 	} else {
-		log_debug("Add announcement for %s:%hu. Keep alive for %lu minutes.", query, port, (lifetime - now) / 60);
+		log_debug("Add announcement for %s:%hu. Keep alive for %lu minutes.", str_id(id), port, (lifetime - now) / 60);
 	}
 
 	// Prepend to list
@@ -138,15 +125,15 @@ struct value_t *announces_add(const char query[], int port, time_t lifetime)
 	return new;
 }
 
-void value_free(struct value_t *value)
+void value_free(struct announcement_t *value)
 {
 	free(value);
 }
 
 static void announces_expire(void)
 {
-	struct value_t *pre;
-	struct value_t *cur;
+	struct announcement_t *pre;
+	struct announcement_t *cur;
 	time_t now;
 
 	now = time_now_sec();
@@ -169,14 +156,14 @@ static void announces_expire(void)
 
 static void announces_announce(void)
 {
-	struct value_t *value;
+	struct announcement_t *value;
 	time_t now;
 
 	now = time_now_sec();
 	value = g_values;
 	while (value) {
 		if (value->refresh < now) {
-			log_debug("Announce %s:%hu", value->query, value->port);
+			log_debug("Announce %s:%hu", str_id(value->id), value->port);
 			kad_announce_once(value->id, value->port);
 			value->refresh = now + ANNOUNCES_INTERVAL;
 		}
@@ -210,8 +197,8 @@ void announces_setup(void)
 
 void announces_free(void)
 {
-	struct value_t *cur;
-	struct value_t *next;
+	struct announcement_t *cur;
+	struct announcement_t *next;
 
 	cur = g_values;
 	while (cur) {

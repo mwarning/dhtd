@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "conf.h"
 #include "peerfile.h"
+#include "announces.h"
 #include "kad.h"
 #ifdef __CYGWIN__
 #include "windows.h"
@@ -343,7 +344,7 @@ static int conf_set(const char opt[], const char val[])
 	switch (option->code)
 	{
 	case oAnnounce:
-		if (!is_hex_id(val)) {
+		if (!is_announcement(val)) {
 			log_error("Invalid announce hash: %s", opt);
 			return EXIT_FAILURE;
 		}
@@ -445,14 +446,15 @@ static int conf_set(const char opt[], const char val[])
 // Load some values that depend on proper settings
 int conf_load(void)
 {
+	uint8_t id[SHA1_BIN_LENGTH];
+	int port;
+
 	for (size_t i = 0; g_announce_args[i]; i += 1) {
 		const char* arg = g_announce_args[i];
-		uint16_t port = gconf->dht_port;
-		char query[QUERY_MAX_SIZE] = { 0 };
 
-		int n = sscanf(arg, "%254[^:]:%hu", query, &port);
-		if (n == 1 || n == 2) {
-			kad_announce(query, port, LONG_MAX);
+		port = gconf->dht_port; // default
+		if (parse_annoucement(id, &port, arg)) {
+			announces_add(id, port, LONG_MAX);
 		} else {
 			log_error("Invalid announcement: %s", arg);
 		}
@@ -461,8 +463,8 @@ int conf_load(void)
 	for (size_t i = 0; g_search_args[i]; i += 1) {
 		const char* arg = g_search_args[i];
 
-		if (is_hex_id(arg)) {
-			kad_search(arg);
+		if (parse_hex_id(id, sizeof(id), arg, strlen(arg))) {
+			kad_search_start(id);
 		} else {
 			log_error("Invalid search hash: %s", arg);
 		}

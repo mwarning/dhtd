@@ -73,7 +73,7 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	IP addr;
 	size_t i;
 
-	search = searches_find_by_id(info_hash);
+	search = searches_find(info_hash);
 
 	if (search == NULL) {
 		return;
@@ -108,7 +108,7 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 */
 void kad_search_own_announcements(struct search_t *search)
 {
-	struct value_t* value;
+	struct announcement_t* value;
 	int af;
 	IP addr;
 
@@ -322,7 +322,7 @@ int kad_count_bucket(const struct bucket *bucket, int good)
 	return count;
 }
 
-int kad_count_nodes(int good)
+int kad_count_nodes(bool good)
 {
 	// Count nodes in IPv4 and IPv6 buckets
 	return kad_count_bucket(buckets, good) + kad_count_bucket(buckets6, good);
@@ -332,19 +332,29 @@ void kad_status(FILE *fp)
 {
 	struct storage *strg = storage;
 	struct search *srch = searches;
-	struct value_t *announces = announces_get();
-	int numsearches_active = 0;
-	int numsearches_done = 0;
+	struct announcement_t *announces = announces_get();
+	int numsearches4_active = 0;
+	int numsearches4_done = 0;
+	int numsearches6_active = 0;
+	int numsearches6_done = 0;
 	int numstorage = 0;
 	int numstorage_peers = 0;
 	int numannounces = 0;
 
 	// Count searches
 	while (srch) {
-		if (srch->done) {
-			numsearches_done += 1;
+		if (srch->af == AF_INET6) {
+			if (srch->done) {
+				numsearches6_done += 1;
+			} else {
+				numsearches6_active += 1;
+			}
 		} else {
-			numsearches_active += 1;
+			if (srch->done) {
+				numsearches4_done += 1;
+			} else {
+				numsearches4_active += 1;
+			}
 		}
 		srch = srch->next;
 	}
@@ -373,72 +383,56 @@ void kad_status(FILE *fp)
 		"DHT id: %s\n"
 		"DHT listen on: %s / %s\n"
 		"DHT nodes: %d IPv4 (%d good), %d IPv6 (%d good)\n"
-		"DHT storage: %d (max %d) entries with %d addresses (max %d)\n"
-		"DHT searches: %d active, %d completed (max %d)\n"
+		"DHT storage: %d entries with %d addresses\n"
+		"DHT searches: %d IPv4 (%d done), %d IPv6 active (%d done),\n"
 		"DHT announcements: %d\n"
-		"DHT blacklist: %d (max %d)\n",
+		"DHT blacklist: %d\n",
 		dhtd_version_str,
 		str_id(myid),
 		str_af(gconf->af), gconf->dht_ifname ? gconf->dht_ifname : "<any>",
 		nodes4, nodes4_good, nodes6, nodes6_good,
-		numstorage, DHT_MAX_HASHES, numstorage_peers, DHT_MAX_PEERS,
-		numsearches_active, numsearches_done, DHT_MAX_SEARCHES,
+		numstorage, numstorage_peers,
+		numsearches4_active, numsearches4_done, numsearches6_active, numsearches6_done,
 		numannounces,
-		(next_blacklisted % DHT_MAX_BLACKLISTED), DHT_MAX_BLACKLISTED
+		(next_blacklisted % DHT_MAX_BLACKLISTED)
 	);
 }
 
-int kad_ping(const IP* addr)
+bool kad_ping(const IP* addr)
 {
 	int rc;
 
 	rc = dht_ping_node((struct sockaddr *)addr, addr_len(addr));
 
-	return (rc < 0) ? -1 : 0;
+	return (rc >= 0);
 }
 
 /*
 * Find nodes that are near the given id and announce to them
 * that this node can satisfy the given id on the given port.
 */
-int kad_announce_once(const uint8_t id[], int port)
+bool kad_announce_once(const uint8_t id[], int port)
 {
 	if (port < 1 || port > 65535) {
 		log_debug("KAD: Invalid port for announcement: %d", port);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	dht_search(id, port, AF_INET, dht_callback_func, NULL);
 	dht_search(id, port, AF_INET6, dht_callback_func, NULL);
 
-	return EXIT_SUCCESS;
-}
-
-/*
-* Add a new value to the announcement list or refresh an announcement.
-*/
-int kad_announce(const char query[], int port, time_t lifetime)
-{
-	char sanitized_query[QUERY_MAX_SIZE];
-
-	// Remove .p2p suffix and convert to lowercase
-	if (EXIT_FAILURE == query_sanitize(sanitized_query, sizeof(sanitized_query), query)) {
-		return EXIT_FAILURE;
-	}
-
-	// Store query to call kad_announce_once() later/multiple times
-	return announces_add(sanitized_query, port, lifetime) ? EXIT_SUCCESS : EXIT_FAILURE;
+	return true;
 }
 
 // Search nodes that have announced the same query
-const struct search_t *kad_search(const char query[])
+const struct search_t *kad_search_start(const uint8_t id[])
 {
 	struct search_t *search;
 
-	log_debug("KAD: search: %s", query);
+	log_debug("KAD: search: %s", str_id(id));
 
 	// Find existing or create new search
-	search = searches_start(query);
+	search = searches_start(id);
 
 	if (search == NULL) {
 		// Failed to create a new search
@@ -460,6 +454,12 @@ const struct search_t *kad_search(const char query[])
 	}
 
 	return search;
+}
+
+bool kad_search_stop(const uint8_t id[])
+{
+	// no way to stop a search in kad
+	return searches_stop(id);
 }
 
 #if 0
@@ -500,11 +500,11 @@ int kad_search_node(const char query[], IP *addr_return)
 }
 #endif
 
-int kad_blacklist(const IP* addr)
+bool kad_blacklist(const IP* addr)
 {
 	blacklist_node(NULL, (struct sockaddr *) addr, sizeof(IP));
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 // Export known peers; the maximum is 200 nodes
