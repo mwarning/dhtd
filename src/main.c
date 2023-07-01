@@ -111,7 +111,6 @@ int main(int argc, char *argv[])
 {
 	char cmd[512];
 	char path[256];
-	int rc = 0;
 	char *p;
 
 #ifdef CMD
@@ -120,9 +119,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	rc |= conf_setup(argc, argv);
-
-	if (rc == EXIT_FAILURE) {
+	if (!conf_setup(argc, argv)) {
 		return EXIT_FAILURE;
 	}
 
@@ -141,7 +138,7 @@ int main(int argc, char *argv[])
 		sprintf(cmd, "cmd.exe /c \"%s\\dns_setup.bat\"", path);
 		windows_exec(cmd);
 
-		rc = windows_service_start((void (*)()) main_run);
+		int rc = windows_service_start((void (*)()) main_run);
 
 		// Reset DNS settings to DHCP
 		sprintf(cmd, "cmd.exe /c \"%s\\dns_reset.bat\"", path);
@@ -194,9 +191,7 @@ int main(int argc, char *argv[])
 		return cmd_client(argc, argv);
 	}
 
-	rc |= conf_setup(argc, argv);
-
-	if (rc == EXIT_FAILURE) {
+	if (!conf_setup(argc, argv)) {
 		return EXIT_FAILURE;
 	}
 

@@ -237,9 +237,9 @@ static int conf_port(const char opt[], int *dst, const char src[])
 }
 
 // forward declaration
-static int conf_set(const char opt[], const char val[]);
+static bool conf_set(const char opt[], const char val[]);
 
-static int conf_load_file(const char path[])
+static bool conf_load_file(const char path[])
 {
 	char option[32];
 	char value[256];
@@ -253,14 +253,14 @@ static int conf_load_file(const char path[])
 
 	if (stat(path, &s) == 0 && !(s.st_mode & S_IFREG)) {
 		log_error("File expected: %s", path);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	nline = 0;
 	file = fopen(path, "r");
 	if (file == NULL) {
 		log_error("Cannot open file: %s (%s)", path, strerror(errno));
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	while (fgets(line, sizeof(line), file) != NULL) {
@@ -283,28 +283,27 @@ static int conf_load_file(const char path[])
 			if (strcmp(option, "--config ") == 0) {
 				fclose(file);
 				log_error("Option '--config' not allowed inside a configuration file, line %ld.", nline);
-				return EXIT_FAILURE;
+				return false;
 			}
 
 			// parse --option value / --option
-			ret = conf_set(option, (ret == 2) ? value : NULL);
-			if (ret == EXIT_FAILURE) {
+			if (!conf_set(option, (ret == 2) ? value : NULL)) {
 				fclose(file);
-				return EXIT_FAILURE;
+				return false;
 			}
 		} else {
 			fclose(file);
 			log_error("Invalid line in config file: %s (%d)", path, nline);
-			return EXIT_FAILURE;
+			return false;
 		}
 	}
 
 	fclose(file);
-	return EXIT_SUCCESS;
+	return true;
 }
 
 // Append to an array
-static int array_append(const char **array, size_t array_length, const char element[])
+static bool array_append(const char **array, size_t array_length, const char element[])
 {
 	size_t i = 0;
 
@@ -314,13 +313,13 @@ static int array_append(const char **array, size_t array_length, const char elem
 
 	if (i < array_length) {
 		array[i] = strdup(element);
-		return EXIT_SUCCESS;
+		return true;
 	} else {
-		return EXIT_FAILURE;
+		return false;
 	}
 }
 
-static int conf_set(const char opt[], const char val[])
+static bool conf_set(const char opt[], const char val[])
 {
 	const struct option_t *option;
 
@@ -328,17 +327,17 @@ static int conf_set(const char opt[], const char val[])
 
 	if (option == NULL) {
 		log_error("Unknown parameter: %s", opt);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	if (option->num_args == 1 && val == NULL) {
 		log_error("Argument expected for option: %s", opt);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	if (option->num_args == 0 && val != NULL) {
 		log_error("No argument expected for option: %s", opt);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	switch (option->code)
@@ -346,21 +345,21 @@ static int conf_set(const char opt[], const char val[])
 	case oAnnounce:
 		if (!is_announcement(val)) {
 			log_error("Invalid announce hash: %s", opt);
-			return EXIT_FAILURE;
+			return false;
 		}
-		if (EXIT_FAILURE == array_append(&g_announce_args[0], ARRAY_SIZE(g_announce_args), val)) {
+		if (!array_append(&g_announce_args[0], ARRAY_SIZE(g_announce_args), val)) {
 			log_error("Too many announce entries");
-			return EXIT_FAILURE;
+			return false;
 		}
 		break;
 	case oSearch:
 		if (!is_hex_id(val)) {
 			log_error("Invalid search hash: %s", opt);
-			return EXIT_FAILURE;
+			return false;
 		}
-		if (EXIT_FAILURE == array_append(&g_search_args[0], ARRAY_SIZE(g_search_args), val)) {
+		if (!array_append(&g_search_args[0], ARRAY_SIZE(g_search_args), val)) {
 			log_error("Too many search entries");
-			return EXIT_FAILURE;
+			return false;
 		}
 		break;
 	case oPidFile:
@@ -378,7 +377,7 @@ static int conf_set(const char opt[], const char val[])
 			gconf->verbosity = VERBOSITY_DEBUG;
 		} else {
 			log_error("Invalid argument for %s", opt);
-			return EXIT_FAILURE;
+			return false;
 		}
 		break;
 #ifdef CMD
@@ -388,7 +387,7 @@ static int conf_set(const char opt[], const char val[])
 	case oCmdPath:
 		if (strlen(val) > FIELD_SIZEOF(struct sockaddr_un, sun_path) - 1) {
 			log_error("Path too long for %s", opt);
-			return EXIT_FAILURE;
+			return false;
 		}
 		return conf_str(opt, &gconf->cmd_path, val);
 #endif
@@ -398,7 +397,7 @@ static int conf_set(const char opt[], const char val[])
 	case oIpv6:
 		if (gconf->af != AF_UNSPEC) {
 			log_error("IPv4 or IPv6 mode already set: %s", opt);
-			return EXIT_FAILURE;
+			return false;
 		}
 
 		gconf->af = (option->code == oIpv6) ? AF_INET6 : AF_INET;
@@ -437,14 +436,14 @@ static int conf_set(const char opt[], const char val[])
 		printf("%s\n", dhtd_version_str);
 		exit(0);
 	default:
-		return EXIT_FAILURE;
+		return false;
 	}
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 // Load some values that depend on proper settings
-int conf_load(void)
+bool conf_load(void)
 {
 	uint8_t id[SHA1_BIN_LENGTH];
 	int port;
@@ -470,7 +469,7 @@ int conf_load(void)
 		}
 	}
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 static struct gconf_t *conf_alloc()
@@ -498,11 +497,11 @@ static struct gconf_t *conf_alloc()
 	return conf;
 }
 
-int conf_setup(int argc, char **argv)
+bool conf_setup(int argc, char **argv)
 {
 	const char *opt;
 	const char *val;
-	int rc;
+	bool rc;
 	int i;
 
 	gconf = conf_alloc();
@@ -521,17 +520,15 @@ int conf_setup(int argc, char **argv)
 		}
 
 		if (rc == EXIT_FAILURE) {
-			return EXIT_FAILURE;
+			return false;
 		}
 	}
 
 	if (gconf->configfile) {
-		rc = conf_load_file(gconf->configfile);
-
-		if (rc == EXIT_FAILURE) {
-			return EXIT_FAILURE;
+		if (!conf_load_file(gconf->configfile)) {
+			return false;
 		}
 	}
 
-	return EXIT_SUCCESS;
+	return true;
 }

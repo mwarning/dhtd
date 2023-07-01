@@ -343,17 +343,17 @@ int port_parse(const char beg[], int err)
 	}
 }
 
-int port_set(IP *addr, uint16_t port)
+bool port_set(IP *addr, uint16_t port)
 {
 	switch (addr->ss_family) {
 	case AF_INET:
 		((IP4 *)addr)->sin_port = htons(port);
-		return EXIT_SUCCESS;
+		return true;
 	case AF_INET6:
 		((IP6 *)addr)->sin6_port = htons(port);
-		return EXIT_SUCCESS;
+		return true;
 	default:
-		return EXIT_FAILURE;
+		return false;
 	}
 }
 

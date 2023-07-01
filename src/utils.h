@@ -41,7 +41,7 @@ char *bytes_to_base16(char dst[], size_t dstsize, const uint8_t src[], size_t sr
 
 int port_random(void);
 int port_parse(const char pstr[], int err);
-int port_set(IP *addr, uint16_t port);
+bool port_set(IP *addr, uint16_t port);
 
 int query_sanitize(char buf[], size_t buflen, const char query[]);
 int bytes_random(uint8_t buffer[], size_t size);
