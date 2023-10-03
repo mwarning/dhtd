@@ -112,12 +112,11 @@ struct search_t* searches_start(const uint8_t id[])
 		// Restart search after half of search lifetime
 		if ((time_now_sec() - search->start_time) > (MAX_SEARCH_LIFETIME / 2)) {
 			search->start_time = time_now_sec();
-			search->done = 0;
+			search->done = false;
 		}
 
 		return search;
 	}
-
 
 	search = calloc(1, sizeof(struct search_t));
 	memcpy(search->id, id, SHA1_BIN_LENGTH);

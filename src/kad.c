@@ -96,7 +96,7 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 			break;
 		case DHT_EVENT_SEARCH_DONE:
 		case DHT_EVENT_SEARCH_DONE6:
-			// Ignore..
+			search->done = true;
 			break;
 	}
 }
