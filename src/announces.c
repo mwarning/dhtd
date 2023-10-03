@@ -40,6 +40,20 @@ struct announcement_t* announces_find(const uint8_t id[])
 	return NULL;
 }
 
+int announces_count()
+{
+	struct announcement_t *value;
+	int count = 0;
+
+	value = g_values;
+	while (value) {
+		count += 1;
+		value = value->next;
+	}
+
+	return count;
+}
+
 void announces_debug(FILE *fp)
 {
 	struct announcement_t *value;

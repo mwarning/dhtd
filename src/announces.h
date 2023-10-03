@@ -24,6 +24,8 @@ void announces_free(void);
 struct announcement_t* announces_get(void);
 struct announcement_t* announces_find(const uint8_t id[]);
 
+int announces_count();
+
 // List all entries
 void announces_debug(FILE *fp);
 
