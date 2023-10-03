@@ -71,7 +71,6 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	dht_addr4_t *data4;
 	dht_addr6_t *data6;
 	IP addr;
-	size_t i;
 
 	search = searches_find(info_hash);
 
@@ -82,14 +81,14 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	switch (event) {
 		case DHT_EVENT_VALUES:
 			data4 = (dht_addr4_t *) data;
-			for (i = 0; i < (data_len / sizeof(dht_addr4_t)); ++i) {
+			for (int i = 0; i < (data_len / sizeof(dht_addr4_t)); ++i) {
 				to_addr(&addr, &data4[i].addr, 4, data4[i].port);
 				searches_add_addr(search, &addr);
 			}
 			break;
 		case DHT_EVENT_VALUES6:
 			data6 = (dht_addr6_t *) data;
-			for (i = 0; i < (data_len / sizeof(dht_addr6_t)); ++i) {
+			for (int i = 0; i < (data_len / sizeof(dht_addr6_t)); ++i) {
 				to_addr(&addr, &data6[i].addr, 16, data6[i].port);
 				searches_add_addr(search, &addr);
 			}
@@ -393,11 +392,7 @@ void kad_status(FILE *fp)
 
 bool kad_ping(const IP* addr)
 {
-	int rc;
-
-	rc = dht_ping_node((struct sockaddr *)addr, addr_len(addr));
-
-	return (rc >= 0);
+	return dht_ping_node((struct sockaddr *)addr, addr_len(addr)) >= 0;
 }
 
 /*
@@ -562,28 +557,27 @@ void kad_debug_buckets(FILE* fp)
 void kad_debug_searches(FILE *fp)
 {
 	struct search *s;
-	int i;
-	int j;
+	int i, j;
 
 	s = searches;
-	for (j = 0; s; ++j) {
+	for (i = 0; s; ++i) {
 		fprintf(fp, " DHT-Search: %s\n", str_id(s->id));
 		fprintf(fp, "  af: %s\n", (s->af == AF_INET) ? "AF_INET" : "AF_INET6");
 		fprintf(fp, "  port: %hu\n", s->port);
 		//fprintf(fp, "  done: %d\n", s->done);
-		for (i = 0; i < s->numnodes; ++i) {
-			struct search_node *sn = &s->nodes[i];
+		for (j = 0; i < s->numnodes; ++j) {
+			struct search_node *sn = &s->nodes[j];
 			fprintf(fp, "   Node: %s\n", str_id(sn->id));
 			fprintf(fp, "     addr: %s\n", str_addr(&sn->ss));
 			fprintf(fp, "     pinged: %d\n", sn->pinged);
 			fprintf(fp, "     replied: %d\n", sn->replied);
 			fprintf(fp, "     acked: %d\n", sn->acked);
 		}
-		fprintf(fp, "  Found %d nodes.\n", i);
+		fprintf(fp, "  Found %d nodes\n", j);
 		s = s->next;
 	}
 
-	fprintf(fp, " Found %d searches.\n", j);
+	fprintf(fp, " Found %d searches\n", i);
 }
 
 // Print announced ids we have received
@@ -595,17 +589,17 @@ void kad_debug_storage(FILE *fp)
 	int i, j;
 
 	s = storage;
-	for (j = 0; s; ++j) {
+	for (i = 0; s; ++i) {
 		fprintf(fp, " id: %s\n", str_id(s->id));
-		for (i = 0; i < s->numpeers; ++i) {
-			p = &s->peers[i];
+		for (j = 0; j < s->numpeers; ++j) {
+			p = &s->peers[j];
 			to_addr(&addr, &p->ip, p->len, htons(p->port));
 			fprintf(fp, "   peer: %s\n", str_addr(&addr));
 		}
-		fprintf(fp, "  Found %d peers.\n", i);
+		fprintf(fp, "  Found %d peers.\n", j);
 		s = s->next;
 	}
-	fprintf(fp, " Found %d stored hashes from received announcements.\n", j);
+	fprintf(fp, " Found %d stored hashes from received announcements.\n", i);
 }
 
 void kad_debug_blacklist(FILE *fp)
