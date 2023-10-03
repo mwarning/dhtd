@@ -175,6 +175,8 @@ static void cmd_exec(FILE *fp, const char request[], int allow_debug)
 	} else if (match(request, " status %n")) {
 		// Print node id and statistics
 		kad_status(fp);
+		fprintf(fp, "searches: %d\n", searches_count());
+		fprintf(fp, "announcements: %d\n", announces_count());
 	} else if (match(request, " announce %n")) {
 		// Announce all values
 		count = 0;
