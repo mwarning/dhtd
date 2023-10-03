@@ -1,6 +1,5 @@
 
-CFLAGS ?= -Os -Wall -Wwrite-strings -pedantic
-CFLAGS += -std=gnu99 -I/usr/local/include $(CPPFLAGS)
+CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99 -I/usr/local/include
 LDFLAGS += -L/usr/local/lib -lc
 FEATURES ?= cmd lpd debug
 
