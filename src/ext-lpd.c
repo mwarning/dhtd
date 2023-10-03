@@ -291,13 +291,13 @@ fail:
 	return -1;
 }
 
-int lpd_setup(void)
+bool lpd_setup(void)
 {
 	const char *ifname;
-	int ready = 0;
+	bool ready = false;
 
 	if (gconf->lpd_disable) {
-		return EXIT_SUCCESS;
+		return true;
 	}
 
 	ifname = gconf->dht_ifname;
@@ -319,15 +319,15 @@ int lpd_setup(void)
 
 	if (g_lpd4.sock_listen >= 0 && g_lpd4.sock_send >= 0) {
 		net_add_handler(g_lpd4.sock_listen, &handle_mcast4);
-		ready += 1;
+		ready = true;
 	}
 
 	if (g_lpd6.sock_listen >= 0 && g_lpd6.sock_send >= 0) {
 		net_add_handler(g_lpd6.sock_listen, &handle_mcast6);
-		ready += 1;
+		ready = true;
 	}
 
-	return ready ? EXIT_SUCCESS : EXIT_FAILURE;
+	return ready;
 }
 
 void lpd_free(void)

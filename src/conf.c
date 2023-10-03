@@ -207,33 +207,33 @@ static const struct option_t *find_option(const char name[])
 }
 
 // Set a string once - error when already set
-static int conf_str(const char opt[], char *dst[], const char src[])
+static bool conf_str(const char opt[], char *dst[], const char src[])
 {
 	if (*dst != NULL) {
 		log_error("Value was already set for %s: %s", opt, src);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	*dst = strdup(src);
-	return EXIT_SUCCESS;
+	return true;
 }
 
-static int conf_port(const char opt[], int *dst, const char src[])
+static bool conf_port(const char opt[], int *dst, const char src[])
 {
 	int n = port_parse(src, -1);
 
 	if (n < 0) {
 		log_error("Invalid port for %s: %s", opt, src);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	if (*dst >= 0) {
 		log_error("Value was already set for %s: %s", opt, src);
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	*dst = n;
-	return EXIT_SUCCESS;
+	return true;
 }
 
 // forward declaration
@@ -501,7 +501,6 @@ bool conf_setup(int argc, char **argv)
 {
 	const char *opt;
 	const char *val;
-	bool rc;
 	int i;
 
 	gconf = conf_alloc();
@@ -512,15 +511,15 @@ bool conf_setup(int argc, char **argv)
 
 		if (val && val[0] != '-') {
 			// -x abc
-			rc = conf_set(opt, val);
+			if (!conf_set(opt, val)) {
+				return false;
+			}
 			i += 1;
 		} else {
 			// -x
-			rc = conf_set(opt, NULL);
-		}
-
-		if (rc == EXIT_FAILURE) {
-			return false;
+			if (!conf_set(opt, NULL)) {
+				return false;
+			}
 		}
 	}
 

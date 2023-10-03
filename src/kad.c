@@ -157,13 +157,6 @@ void dht_handler(int rc, int sock)
 		buflen = 0;
 	}
 
-#ifdef BOB
-	// Hook up BOB extension on the DHT socket
-	if (bob_handler(sock, buf, buflen, &from) == 0) {
-		return;
-	}
-#endif
-
 	if (buflen > 0) {
 		// Handle incoming data
 		rc = dht_periodic(buf, buflen, (struct sockaddr*) &from, fromlen, &time_wait, dht_callback_func, NULL);
@@ -256,7 +249,7 @@ int dht_random_bytes(void *buf, size_t size)
 	return bytes_random(buf, size);
 }
 
-int kad_setup(void)
+bool kad_setup(void)
 {
 	uint8_t node_id[SHA1_BIN_LENGTH];
 
@@ -284,16 +277,16 @@ int kad_setup(void)
 	}
 
 	if (g_dht_socket4 < 0 && g_dht_socket6 < 0) {
-		return EXIT_FAILURE;
+		return false;
 	}
 
 	// Init the DHT.  Also set the sockets into non-blocking mode.
 	if (dht_init(g_dht_socket4, g_dht_socket6, node_id, (uint8_t*) "DD\0\0") < 0) {
 		log_error("KAD: Failed to initialize the DHT.");
-		return EXIT_FAILURE;
+		return false;
 	}
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 void kad_free(void)
@@ -468,24 +461,25 @@ bool kad_search_stop(const uint8_t id[])
 * The search will be performed on the results of kad_search().
 * The port in the returned address refers to the kad instance.
 */
-int kad_search_node(const char query[], IP *addr_return)
+bool kad_search_node(const char query[], IP *addr_return)
 {
 	uint8_t id[SHA1_BIN_LENGTH];
 	struct search *sr;
-	int i, rc;
+	int i;
+	bool rc;
 
-	if (EXIT_FAILURE == bytes_from_base16hex(id, query, SHA1_HEX_LENGTH) {
-		return EXIT_FAILURE;
+	if (!bytes_from_base16hex(id, query, SHA1_HEX_LENGTH) {
+		return false;
 	}
 
-	rc = 1;
+	rc = true;
 	sr = searches;
 	while (sr) {
 		if (sr->af == gconf->af && id_equal(sr->id, id)) {
 			for (i = 0; i < sr->numnodes; ++i) {
 				if (id_equal(sr->nodes[i].id, id)) {
 					memcpy(addr_return, &sr->nodes[i].ss, sizeof(IP));
-					rc = 0;
+					rc = false;
 					goto done;
 				}
 			}

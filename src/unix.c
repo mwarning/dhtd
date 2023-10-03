@@ -53,7 +53,7 @@ void unix_signals(void)
 	signal(SIGPIPE, SIG_IGN);
 }
 
-int unix_create_unix_socket(const char path[], int *sock_out)
+bool unix_create_unix_socket(const char path[], int *sock_out)
 {
 	struct sockaddr_un addr = {0};
 	int sock = -1;
@@ -86,7 +86,7 @@ int unix_create_unix_socket(const char path[], int *sock_out)
 
 	*sock_out = sock;
 
-	return EXIT_SUCCESS;
+	return true;
 
 err:
 
@@ -94,7 +94,7 @@ err:
 		unix_remove_unix_socket(path, sock);
 	}
 
-	return EXIT_FAILURE;
+	return false;
 }
 
 void unix_remove_unix_socket(const char path[], int sock_in)

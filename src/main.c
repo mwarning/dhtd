@@ -31,24 +31,15 @@ static bool g_pidfile_written = false;
 
 int main_run(void)
 {
-	int rc = 0;
-
-	if (EXIT_SUCCESS != 0) {
-		fprintf(stderr, "Problematic EXIT_SUCCESS definition\n");
-		return EXIT_FAILURE;
-	}
+	bool rc = true;
 
 	/* Run setup */
-
-	rc |= conf_load();
-
-	// Early exit
-	if (rc == EXIT_FAILURE) {
+	if (!conf_load()) {
 		return EXIT_FAILURE;
 	}
 
 	// Setup the Kademlia DHT
-	rc |= kad_setup();
+	rc &= kad_setup();
 
 	// Setup handler to announces
 	announces_setup();
@@ -61,15 +52,15 @@ int main_run(void)
 
 	// Setup extensions
 #ifdef LPD
-	rc |= lpd_setup();
+	rc &= lpd_setup();
 #endif
 
 #ifdef CMD
-	rc |= cmd_setup();
+	rc &= cmd_setup();
 #endif
 
 	/* Run program */
-	if (rc == EXIT_SUCCESS) {
+	if (rc) {
 		// Loop over all sockets and file descriptors
 		net_loop();
 		log_info("Shutting down...");
@@ -103,7 +94,7 @@ int main_run(void)
 		unlink(gconf->pidfile);
 	}
 
-	return rc;
+	return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 #ifdef __CYGWIN__
@@ -185,8 +176,6 @@ int main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 {
-	int rc = 0;
-
 	if (strstr(argv[0], "dhtd-ctl")) {
 		return cmd_client(argc, argv);
 	}

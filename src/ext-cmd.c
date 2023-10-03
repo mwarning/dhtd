@@ -339,10 +339,10 @@ static void cmd_console_handler(int rc, int fd)
 	cmd_exec(stdout, request, 1);
 }
 
-int cmd_setup(void)
+bool cmd_setup(void)
 {
-	if (EXIT_FAILURE == unix_create_unix_socket(gconf->cmd_path, &g_cmd_sock)) {
-		return EXIT_FAILURE;
+	if (!unix_create_unix_socket(gconf->cmd_path, &g_cmd_sock)) {
+		return false;
 	} else {
 		log_info("CMD: Bind to %s", gconf->cmd_path);
 
@@ -353,7 +353,7 @@ int cmd_setup(void)
 			net_add_handler(STDIN_FILENO, &cmd_console_handler);
 		}
 
-		return EXIT_SUCCESS;
+		return true;
 	}
 }
 
