@@ -564,7 +564,7 @@ void kad_debug_searches(FILE *fp)
 		fprintf(fp, " DHT-Search: %s\n", str_id(s->id));
 		fprintf(fp, "  af: %s\n", (s->af == AF_INET) ? "AF_INET" : "AF_INET6");
 		fprintf(fp, "  port: %hu\n", s->port);
-		//fprintf(fp, "  done: %d\n", s->done);
+		fprintf(fp, "   done: %s\n", s->done ? "true" : "false");
 		for (j = 0; i < s->numnodes; ++j) {
 			struct search_node *sn = &s->nodes[j];
 			fprintf(fp, "   Node: %s\n", str_id(sn->id));
