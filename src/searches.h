@@ -31,6 +31,8 @@ bool searches_stop(const uint8_t id[]);
 // Find a search by infohash, so we can add results
 struct search_t *searches_find(const uint8_t id[]);
 
+int searches_count();
+
 // Add an address to a result bucket
 void searches_add_addr(struct search_t *search, const IP *addr);
 

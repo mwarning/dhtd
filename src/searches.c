@@ -57,6 +57,20 @@ void search_free(struct search_t *search)
 	free(search);
 }
 
+int searches_count()
+{
+	struct search_t *search;
+	int count = 0;
+
+	search = g_searches;
+	while (search) {
+		count += 1;
+		search = search->next;
+	}
+
+	return count;
+}
+
 void searches_debug(FILE *fp)
 {
 	struct search_t *search;
