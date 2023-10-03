@@ -5,8 +5,8 @@
 
 #include <netinet/in.h>
 
-#define MAIN_SRVNAME "DHTd"
-#define MAIN_VERSION "1.0.0"
+#define PROGRAM_NAME "DHTd"
+#define PROGRAM_VERSION "1.0.0"
 
 #define SHA1_BIN_LENGTH 20
 #define SHA1_HEX_LENGTH (2 * SHA1_BIN_LENGTH)

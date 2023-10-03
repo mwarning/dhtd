@@ -61,7 +61,7 @@ void windows_service_main(int argc, char **argv)
 int windows_service_start(void (*func)())
 {
 	static SERVICE_TABLE_ENTRY services[] = {
-		{ (char*) MAIN_SRVNAME,  (LPSERVICE_MAIN_FUNCTIONA) windows_service_main },
+		{ (char*) PROGRAM_NAME,  (LPSERVICE_MAIN_FUNCTIONA) windows_service_main },
 		{ NULL, NULL }
 	};
 
@@ -89,8 +89,8 @@ void windows_service_install(void)
 	SC_HANDLE hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE);
 	SC_HANDLE hService = CreateService(
 		hSCManager,
-		MAIN_SRVNAME, // Name of service
-		MAIN_SRVNAME, // Name to display
+		PROGRAM_NAME, // Name of service
+		PROGRAM_NAME, // Name to display
 		SERVICE_ALL_ACCESS, // Desired access
 		SERVICE_WIN32_OWN_PROCESS, // Service type
 		SERVICE_AUTO_START, // Start type
@@ -117,7 +117,7 @@ void windows_service_remove(void)
 {
 	SC_HANDLE hService = 0;
 	SC_HANDLE hSCManager = OpenSCManager(0, 0, 0);
-	hService = OpenService(hSCManager, MAIN_SRVNAME, DELETE);
+	hService = OpenService(hSCManager, PROGRAM_NAME, DELETE);
 	DeleteService(hService);
 	CloseServiceHandle(hService);
 	CloseServiceHandle(hSCManager);

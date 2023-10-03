@@ -27,7 +27,7 @@ struct gconf_t *gconf = NULL;
 static const char *g_announce_args[32] = { 0 };
 static const char *g_search_args[32] = { 0 };
 
-const char *dhtd_version_str = "DHTd v"MAIN_VERSION" ("
+const char *dhtd_version_str = PROGRAM_NAME " " PROGRAM_VERSION " ("
 " cmd"
 #ifdef DEBUG
 " debug"
