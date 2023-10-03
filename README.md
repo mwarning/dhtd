@@ -35,13 +35,13 @@ Example output after a few minutes:
 ```
 $ dhtd-ctl status
 DHTd v1.0.0 ( cmd debug lpd )
-DHT id: 787be1061449d204b4c9ae8fbf94d77a1c942615
+DHT id: 9e918df4c10a3d2127d86311b20195447e70376b
 DHT listen on: IPv4+IPv6 / <any>
-DHT nodes: 128 IPv4 (102 good), 128 IPv6 (45 good)
-DHT storage: 0 (max 16384) entries with 0 addresses (max 2048)
-DHT searches: 0 active, 0 completed (max 1024)
+DHT nodes: 376 IPv4 (310 good), 344 IPv6 (239 good)
+DHT storage: 43 entries with 145 addresses
+DHT searches: 0 IPv4 (0 done), 0 IPv6 active (0 done),
 DHT announcements: 0
-DHT blacklist: 0 (max 10)
+DHT blacklist: 0
 ```
 
 Start a query:
