@@ -106,7 +106,7 @@ struct search_t* searches_start(const uint8_t id[])
 
 
 	search = calloc(1, sizeof(struct search_t));
-	memcpy(search->id, id, sizeof(SHA1_BIN_LENGTH));
+	memcpy(search->id, id, SHA1_BIN_LENGTH);
 	search->start_time = time_now_sec();
 
 	log_debug("Searches: Create new search for id: %s", str_id(id));
