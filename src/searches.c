@@ -78,7 +78,7 @@ void searches_debug(FILE *fp)
 	int result_counter;
 	int search_counter;
 
-	fprintf(fp, "Result buckets:\n");
+	fprintf(fp, "Searches:\n");
 
 	search_counter = 0;
 	search = g_searches;
@@ -93,13 +93,13 @@ void searches_debug(FILE *fp)
 			result_counter += 1;
 			result = result->next;
 		}
-		fprintf(fp, "  Found %d results.\n", result_counter);
+		fprintf(fp, "  Found %d results\n", result_counter);
 		result_counter += 1;
 		search_counter += 1;
 		search = search->next;
 	}
 
-	fprintf(fp, " Found %d searches.\n", search_counter);
+	fprintf(fp, " Found %d searches\n", search_counter);
 }
 
 // Start a new search for a sanitized query
