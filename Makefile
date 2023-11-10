@@ -1,7 +1,7 @@
 
 CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99 -I/usr/local/include
 LDFLAGS += -L/usr/local/lib -lc
-FEATURES ?= cmd lpd debug
+FEATURES ?= cli lpd debug
 
 OBJS = build/kad.o build/log.o \
 	build/conf.o build/net.o build/utils.o \
@@ -18,9 +18,9 @@ endif
 
 all: dhtd
 
-ifeq ($(findstring cmd,$(FEATURES)),cmd)
-  OBJS += build/ext-cmd.o
-  CFLAGS += -DCMD
+ifeq ($(findstring cli,$(FEATURES)),cli)
+  OBJS += build/ext-cli.o
+  CFLAGS += -DCLI
 endif
 
 ifeq ($(findstring lpd,$(FEATURES)),lpd)

@@ -23,7 +23,7 @@
 #ifdef LPD
 #include "ext-lpd.h"
 #endif
-#include "ext-cmd.h"
+#include "ext-cli.h"
 
 static bool g_pidfile_written = false;
 
@@ -51,8 +51,8 @@ int main_run(void)
 	rc &= lpd_setup();
 #endif
 
-#ifdef CMD
-	rc &= cmd_setup();
+#ifdef CLI
+	rc &= cli_setup();
 #endif
 
 	/* Run program */
@@ -67,8 +67,8 @@ int main_run(void)
 
 	/* Free resources */
 
-#ifdef CMD
-	cmd_free();
+#ifdef CLI
+	cli_free();
 #endif
 #ifdef LPD
 	lpd_free();
@@ -98,9 +98,9 @@ int main(int argc, char *argv[])
 	char path[256];
 	char *p;
 
-#ifdef CMD
+#ifdef CLI
 	if (strstr(argv[0], "dhtd-ctl")) {
-		return cmd_client(argc, argv);
+		return cli_client(argc, argv);
 	}
 #endif
 
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	if (strstr(argv[0], "dhtd-ctl")) {
-		return cmd_client(argc, argv);
+		return cli_client(argc, argv);
 	}
 
 	if (!conf_setup(argc, argv)) {

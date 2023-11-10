@@ -28,7 +28,9 @@ static const char *g_announce_args[32] = { 0 };
 //static const char *g_search_args[32] = { 0 };
 
 const char *dhtd_version_str = PROGRAM_NAME " " PROGRAM_VERSION " ("
-" cmd"
+#ifdef CLI
+" cli"
+#endif
 #ifdef DEBUG
 " debug"
 #endif
@@ -64,10 +66,10 @@ static const char *dhtd_usage_str =
 #ifdef LPD
 " --lpd-disable				Disable local peer discovery.\n\n"
 #endif
-#ifdef CMD
-" --cmd-disable-stdin			Disable the local control interface.\n\n"
-" --cmd-path <path>			Bind the remote control interface to this unix socket path.\n"
-"					Default: "CMD_PATH"\n\n"
+#ifdef CLI
+" --cli-disable-stdin			Disable the local control interface.\n\n"
+" --cli-path <path>			Bind the remote control interface to this unix socket path.\n"
+"					Default: "CLI_PATH"\n\n"
 #endif
 #ifdef __CYGWIN__
 " --service-start			Start, install and remove DHTd as Windows service.\n"
@@ -115,8 +117,8 @@ void conf_free(void)
 	free(gconf->dht_ifname);
 	free(gconf->configfile);
 
-#ifdef CMD
-	free(gconf->cmd_path);
+#ifdef CLI
+	free(gconf->cli_path);
 #endif
 
 	free(gconf);
@@ -129,8 +131,8 @@ enum OPCODE {
 	oPeerFile,
 	oPeer,
 	oVerbosity,
-	oCmdDisableStdin,
-	oCmdPath,
+	oCliDisableStdin,
+	oCliPath,
 	oConfig,
 	oIpv4,
 	oIpv6,
@@ -161,9 +163,9 @@ static struct option_t g_options[] = {
 	{"--peerfile", 1, oPeerFile},
 	{"--peer", 1, oPeer},
 	{"--verbosity", 1, oVerbosity},
-#ifdef CMD
-	{"--cmd-disable-stdin", 0, oCmdDisableStdin},
-	{"--cmd-path", 1, oCmdPath},
+#ifdef CLI
+	{"--cli-disable-stdin", 0, oCliDisableStdin},
+	{"--cli-path", 1, oCliPath},
 #endif
 	{"--config", 1, oConfig},
 	{"--port", 1, oPort},
@@ -383,16 +385,16 @@ static bool conf_set(const char opt[], const char val[])
 			return false;
 		}
 		break;
-#ifdef CMD
-	case oCmdDisableStdin:
-		gconf->cmd_disable_stdin = true;
+#ifdef CLI
+	case oCliDisableStdin:
+		gconf->cli_disable_stdin = true;
 		break;
-	case oCmdPath:
+	case oCliPath:
 		if (strlen(val) > FIELD_SIZEOF(struct sockaddr_un, sun_path) - 1) {
 			log_error("Path too long for %s", opt);
 			return false;
 		}
-		return conf_str(opt, &gconf->cmd_path, val);
+		return conf_str(opt, &gconf->cli_path, val);
 #endif
 	case oConfig:
 		return conf_str(opt, &gconf->configfile, val);
@@ -489,8 +491,8 @@ static struct gconf_t *conf_alloc()
 #else
 		.verbosity = VERBOSITY_VERBOSE,
 #endif
-#ifdef CMD
-		.cmd_path = strdup(CMD_PATH),
+#ifdef CLI
+		.cli_path = strdup(CLI_PATH),
 #endif
 		.time_now = now,
 		.startup_time = now,

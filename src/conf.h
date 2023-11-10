@@ -68,9 +68,9 @@ struct gconf_t {
 	bool lpd_disable;
 #endif
 
-#ifdef CMD
-	char *cmd_path;
-	bool cmd_disable_stdin;
+#ifdef CLI
+	char *cli_path;
+	bool cli_disable_stdin;
 #endif
 };
 

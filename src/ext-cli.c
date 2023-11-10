@@ -19,14 +19,14 @@
 #include "net.h"
 #include "unix.h"
 #include "announces.h"
-#include "ext-cmd.h"
+#include "ext-cli.h"
 
 
 static const char *g_client_usage =
 PROGRAM_NAME" Control Program - Send commands to a DHTd instance.\n\n"
 "Usage: dhtd-ctl [OPTIONS] [COMMANDS]\n"
 "\n"
-" -p <file>	Connect to this unix socket (Default: "CMD_PATH")\n"
+" -p <file>	Connect to this unix socket (Default: "CLI_PATH")\n"
 " -h		Print this help.\n"
 "\n";
 
@@ -43,7 +43,7 @@ const char* g_server_usage_debug =
 	"	list announcements|searches|constants|blacklist\n"
 	"	list peers|buckets|storage\n";
 
-static int g_cmd_sock = -1;
+static int g_cli_sock = -1;
 
 
 static int cmd_ping(FILE *fp, const char addr_str[], int af)
@@ -254,7 +254,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 	}
 }
 
-static void cmd_client_handler(int rc, int clientsock)
+static void cli_client_handler(int rc, int clientsock)
 {
 	// save state since a line and come in multiple calls
 	static char request[256];
@@ -324,11 +324,11 @@ static void cmd_client_handler(int rc, int clientsock)
 		current_clientfd = NULL;
 		request_length = 0;
 
-		net_remove_handler(clientsock, &cmd_client_handler);
+		net_remove_handler(clientsock, &cli_client_handler);
 	}
 }
 
-static void cmd_server_handler(int rc, int serversock)
+static void cli_server_handler(int rc, int serversock)
 {
 	int clientsock;
 
@@ -342,11 +342,11 @@ static void cmd_server_handler(int rc, int serversock)
 		return;
 	}
 
-	net_add_handler(clientsock, &cmd_client_handler);
+	net_add_handler(clientsock, &cli_client_handler);
 }
 
 // special case for local console
-static void cmd_console_handler(int rc, int fd)
+static void cli_console_handler(int rc, int fd)
 {
 	char request[256];
 	char *ptr;
@@ -365,28 +365,28 @@ static void cmd_console_handler(int rc, int fd)
 	cmd_exec(stdout, request, true);
 }
 
-bool cmd_setup(void)
+bool cli_setup(void)
 {
-	if (!unix_create_unix_socket(gconf->cmd_path, &g_cmd_sock)) {
+	if (!unix_create_unix_socket(gconf->cli_path, &g_cli_sock)) {
 		return false;
 	} else {
-		log_info("CMD: Bind to %s", gconf->cmd_path);
+		log_info("CLI: Bind to %s", gconf->cli_path);
 
-		net_add_handler(g_cmd_sock, &cmd_server_handler);
+		net_add_handler(g_cli_sock, &cli_server_handler);
 
-		if (!gconf->is_daemon && !gconf->cmd_disable_stdin) {
+		if (!gconf->is_daemon && !gconf->cli_disable_stdin) {
 			fprintf(stdout, "Press Enter for help.\n");
-			net_add_handler(STDIN_FILENO, &cmd_console_handler);
+			net_add_handler(STDIN_FILENO, &cli_console_handler);
 		}
 
 		return true;
 	}
 }
 
-void cmd_free(void)
+void cli_free(void)
 {
-	if (g_cmd_sock >= 0) {
-		unix_remove_unix_socket(gconf->cmd_path, g_cmd_sock);
+	if (g_cli_sock >= 0) {
+		unix_remove_unix_socket(gconf->cli_path, g_cli_sock);
 	}
 }
 
@@ -414,7 +414,7 @@ static int select_read(int sockfd, char buffer[], int bufsize, struct timeval *t
 }
 #endif
 
-int cmd_client(int argc, char *argv[])
+int cli_client(int argc, char *argv[])
 {
 	char buffer[256];
 	const char *path;
@@ -426,7 +426,7 @@ int cmd_client(int argc, char *argv[])
 	int i;
 
 	// Default unix socket path
-	path = CMD_PATH;
+	path = CLI_PATH;
 
 	// Skip program name
 	argc -= 1;

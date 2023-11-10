@@ -34,7 +34,7 @@ Example output after a few minutes:
 
 ```
 $ dhtd-ctl status
-DHTd v1.0.0 ( cmd debug lpd )
+DHTd v1.0.0 ( cli debug lpd )
 DHT id: 9e918df4c10a3d2127d86311b20195447e70376b
 DHT listen on: IPv4+IPv6 / <any>
 DHT nodes: 376 IPv4 (310 good), 344 IPv6 (239 good)
@@ -47,7 +47,7 @@ DHT blacklist: 0
 Start a query:
 
 ```
-$ dhtd-ctl search 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
+$ dhtd-ctl search start 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
 Search started.
 ```
 (the id is from a magnet link of a Debian Linux torrent file)
@@ -108,9 +108,9 @@ Or use the `--execute <file>` command line argument to execute a script for each
   Default: IPv4+IPv6
 * `--lpd-disable`  
   Disable multicast to discover local peers.
-* `--cmd-disable-stdin`  
+* `--cli-disable-stdin`  
   Disable the local control interface.
-* `--cmd-path` *path*  
+* `--cli-path` *path*  
   Bind the remote control interface to this unix socket path.  
   Default: /tmp/dhtd.sock
 * `--help`, `-h`  
