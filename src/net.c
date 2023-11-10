@@ -61,7 +61,7 @@ void net_remove_handler(int fd, net_callback *cb)
 	int i;
 
 	if (cb == NULL) {
-		fprintf(stderr, "Invalid arguments.");
+		log_error("Invalid arguments.");
 		exit(1);
 	}
 

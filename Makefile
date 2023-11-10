@@ -3,7 +3,7 @@ CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99 -I/usr/local/include
 LDFLAGS += -L/usr/local/lib -lc
 FEATURES ?= cmd lpd debug
 
-OBJS = build/searches.o build/kad.o build/log.o \
+OBJS = build/kad.o build/log.o \
 	build/conf.o build/net.o build/utils.o \
 	build/announces.o build/peerfile.o
 

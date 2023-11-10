@@ -40,31 +40,12 @@ struct announcement_t* announces_find(const uint8_t id[])
 	return NULL;
 }
 
-int announces_count()
-{
-	struct announcement_t *value;
-	int count = 0;
-
-	value = g_values;
-	while (value) {
-		count += 1;
-		value = value->next;
-	}
-
-	return count;
-}
-
 void announces_debug(FILE *fp)
 {
-	struct announcement_t *value;
-	time_t now;
-	int nodes_counter;
-	int value_counter;
-
-	now = time_now_sec();
-	value_counter = 0;
-	nodes_counter = kad_count_nodes(0);
-	value = g_values;
+	time_t now = time_now_sec();
+	int value_counter = 0;
+	int nodes_counter = kad_count_nodes(false);
+	struct announcement_t *value = g_values;
 
 	fprintf(fp, "Announcements:\n");
 	fprintf(fp, "interval: %dm\n", ANNOUNCES_INTERVAL / 60);
@@ -101,6 +82,11 @@ struct announcement_t *announces_add(uint8_t id[], int port, time_t lifetime)
 	struct announcement_t *cur;
 	struct announcement_t *new;
 	time_t now = time_now_sec();
+
+	// port must be != 0
+	if (!port_valid(port)) {
+		return NULL;
+	}
 
 	// Value already exists - refresh
 	if ((cur = announces_find(id)) != NULL) {
@@ -144,6 +130,30 @@ void value_free(struct announcement_t *value)
 	free(value);
 }
 
+bool announcement_remove(const uint8_t id[])
+{
+	struct announcement_t *pre;
+	struct announcement_t *cur;
+
+	pre = NULL;
+	cur = g_values;
+	while (cur) {
+		if (id_equal(id, cur->id)) {
+			if (pre) {
+				pre->next = cur->next;
+			} else {
+				g_values = cur->next;
+			}
+			value_free(cur);
+			return true;
+		}
+		pre = cur;
+		cur = cur->next;
+	}
+
+	return false;
+}
+
 static void announces_expire(void)
 {
 	struct announcement_t *pre;
@@ -178,7 +188,7 @@ static void announces_announce(void)
 	while (value) {
 		if (value->refresh < now) {
 			log_debug("Announce %s:%hu", str_id(value->id), value->port);
-			kad_announce_once(value->id, value->port);
+			kad_start_search(NULL, value->id, value->port);
 			value->refresh = now + ANNOUNCES_INTERVAL;
 		}
 		value = value->next;
@@ -195,7 +205,7 @@ static void announces_handle(int _rc, int _sock)
 		g_announces_expire = time_add_mins(1);
 	}
 
-	if (g_announces_announce <= time_now_sec() && kad_count_nodes(0) != 0) {
+	if (g_announces_announce <= time_now_sec() && kad_count_nodes(false) != 0) {
 		announces_announce();
 
 		// Try again in ~1 minute

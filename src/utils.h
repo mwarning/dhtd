@@ -32,7 +32,7 @@ bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querys
 
 // query is "<hex-id>[:<port>]"
 bool is_announcement(const char query[]);
-bool parse_annoucement(uint8_t id[], int *port, const char query[]);
+bool parse_annoucement(uint8_t id[], int *port, const char query[], int default_port);
 
 bool bytes_from_base32(uint8_t dst[], size_t dstsize, const char src[], size_t srcsize);
 char *bytes_to_base32(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize);
@@ -40,8 +40,10 @@ bool bytes_from_base16(uint8_t dst[], size_t dstsize, const char src[], size_t s
 char *bytes_to_base16(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize);
 
 int port_random(void);
-int port_parse(const char pstr[], int err);
+bool port_valid(int port);
 bool port_set(IP *addr, uint16_t port);
+
+int parse_int(const char *s, int err);
 
 int query_sanitize(char buf[], size_t buflen, const char query[]);
 int bytes_random(uint8_t buffer[], size_t size);

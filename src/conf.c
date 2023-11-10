@@ -25,7 +25,7 @@
 struct gconf_t *gconf = NULL;
 
 static const char *g_announce_args[32] = { 0 };
-static const char *g_search_args[32] = { 0 };
+//static const char *g_search_args[32] = { 0 };
 
 const char *dhtd_version_str = PROGRAM_NAME " " PROGRAM_VERSION " ("
 " cmd"
@@ -62,7 +62,7 @@ static const char *dhtd_usage_str =
 " --ipv4, -4, --ipv6, -6			Enable IPv4 or IPv6 only mode.\n"
 "					Default: IPv4+IPv6\n\n"
 #ifdef LPD
-" --lpd-disable				Disable multicast to discover local peers.\n\n"
+" --lpd-disable				Disable local peer discovery.\n\n"
 #endif
 #ifdef CMD
 " --cmd-disable-stdin			Disable the local control interface.\n\n"
@@ -135,7 +135,7 @@ enum OPCODE {
 	oIpv4,
 	oIpv6,
 	oPort,
-	oSearch,
+	//oSearch,
 	oLpdDisable,
 	oServiceInstall,
 	oServiceRemove,
@@ -156,7 +156,7 @@ struct option_t {
 
 static struct option_t g_options[] = {
 	{"--announce", 1, oAnnounce},
-	{"--search", 1, oSearch},
+	//{"--search", 1, oSearch},
 	{"--pidfile", 1, oPidFile},
 	{"--peerfile", 1, oPeerFile},
 	{"--peer", 1, oPeer},
@@ -220,9 +220,10 @@ static bool conf_str(const char opt[], char *dst[], const char src[])
 
 static bool conf_port(const char opt[], int *dst, const char src[])
 {
-	int n = port_parse(src, -1);
+	int port = parse_int(src, -1);
 
-	if (n < 0) {
+	// port must be != 0
+	if (!port_valid(port)) {
 		log_error("Invalid port for %s: %s", opt, src);
 		return false;
 	}
@@ -232,7 +233,7 @@ static bool conf_port(const char opt[], int *dst, const char src[])
 		return false;
 	}
 
-	*dst = n;
+	*dst = port;
 	return true;
 }
 
@@ -352,6 +353,7 @@ static bool conf_set(const char opt[], const char val[])
 			return false;
 		}
 		break;
+/*
 	case oSearch:
 		if (!is_hex_id(val)) {
 			log_error("Invalid search hash: %s", opt);
@@ -362,6 +364,7 @@ static bool conf_set(const char opt[], const char val[])
 			return false;
 		}
 		break;
+*/
 	case oPidFile:
 		return conf_str(opt, &gconf->pidfile, val);
 	case oPeerFile:
@@ -451,24 +454,24 @@ bool conf_load(void)
 	for (size_t i = 0; g_announce_args[i]; i += 1) {
 		const char* arg = g_announce_args[i];
 
-		port = gconf->dht_port; // default
-		if (parse_annoucement(id, &port, arg)) {
+		if (parse_annoucement(id, &port, arg, gconf->dht_port)) {
 			announces_add(id, port, LONG_MAX);
 		} else {
 			log_error("Invalid announcement: %s", arg);
 		}
 	}
-
+/*
 	for (size_t i = 0; g_search_args[i]; i += 1) {
 		const char* arg = g_search_args[i];
 
+		// what happens when the search times out?
 		if (parse_hex_id(id, sizeof(id), arg, strlen(arg))) {
-			kad_search_start(id);
+			kad_start_search(NULL, id, 0);
 		} else {
 			log_error("Invalid search hash: %s", arg);
 		}
 	}
-
+*/
 	return true;
 }
 

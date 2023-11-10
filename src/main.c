@@ -15,7 +15,6 @@
 #include "unix.h"
 #include "net.h"
 #include "announces.h"
-#include "searches.h"
 #include "peerfile.h"
 #ifdef __CYGWIN__
 #include "windows.h"
@@ -41,11 +40,8 @@ int main_run(void)
 	// Setup the Kademlia DHT
 	rc &= kad_setup();
 
-	// Setup handler to announces
+	// Setup handler for announcements
 	announces_setup();
-
-	// Setup handler to expire results
-	searches_setup();
 
 	// Setup import of peerfile
 	peerfile_setup();
@@ -79,8 +75,6 @@ int main_run(void)
 #endif
 
 	peerfile_free();
-
-	searches_free();
 
 	announces_free();
 

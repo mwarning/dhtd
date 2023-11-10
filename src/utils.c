@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <ctype.h>
+#include <limits.h>
 
 #include "main.h"
 #include "log.h"
@@ -36,18 +37,24 @@ bool is_hex_id(const char query[])
 }
 
 // "<hex-id>[:<port>]"
-bool parse_annoucement(uint8_t id[], int *port, const char query[])
+bool parse_annoucement(uint8_t id[], int *port, const char query[], int default_port)
 {
 	const char *beg = query;
 	const char *colon = strchr(beg, ':');
 	size_t len = strlen(query);
 
 	if (colon) {
-		*port = port_parse(colon + 1, -1);
+		int n = parse_int(colon + 1, -1);
+		if (!port_valid(n)) {
+			return false;
+		}
+		*port = n;
 		len = colon - beg;
+	} else {
+		*port = default_port;
 	}
 
-	return parse_hex_id(id, SHA1_BIN_LENGTH, query, len) && (*port != -1);
+	return parse_hex_id(id, SHA1_BIN_LENGTH, query, len);
 }
 
 // "<hex-id>[:<port>]"
@@ -55,7 +62,7 @@ bool is_announcement(const char query[])
 {
 	uint8_t id[SHA1_BIN_LENGTH];
 	int port;
-	return parse_annoucement(id, &port, query);
+	return parse_annoucement(id, &port, query, -1);
 }
 
 static size_t base16_len(size_t len)
@@ -78,6 +85,8 @@ bool bytes_from_base16(uint8_t dst[], size_t dstsize, const char src[], size_t s
 			xv += c - '0';
 		} else if (c >= 'a' && c <= 'f') {
 			xv += (c - 'a') + 10;
+		} else if (c >= 'A' && c <= 'F') {
+			xv += (c - 'A') + 10;
 		} else {
 			return false;
 		}
@@ -96,14 +105,13 @@ bool bytes_from_base16(uint8_t dst[], size_t dstsize, const char src[], size_t s
 char *bytes_to_base16(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize)
 {
 	static const char hexchars[16] = "0123456789abcdef";
-	size_t i;
 
 	// + 1 for the '\0'
 	if (dstsize != (base16_len(srcsize) + 1)) {
 		return NULL;
 	}
 
-	for (i = 0; i < srcsize; ++i) {
+	for (size_t i = 0; i < srcsize; ++i) {
 		dst[2 * i] = hexchars[src[i] / 16];
 		dst[2 * i + 1] = hexchars[src[i] % 16];
 	}
@@ -125,16 +133,17 @@ bool bytes_from_base32(uint8_t dst[], size_t dstsize, const char src[], size_t s
 {
 	size_t processed = 0;
 	unsigned char *d = dst;
-	int i;
 	int v;
 
 	if (srcsize != base32_len(dstsize)) {
 		return false;
 	}
 
-	for (i = 0; i < srcsize; i++) {
+	for (size_t i = 0; i < srcsize; i++) {
 		if (*src >= 'a' && *src <= 'v') {
 			v = *src - 'a' + 10;
+		} else if (*src >= 'A' && *src <= 'V') {
+			v = *src - 'A' + 10;
 		} else if (*src >= '0' && *src <= '9') {
 			v = *src - '0';
 		} else if (*src == '=') {
@@ -300,10 +309,7 @@ char *bytes_to_base32(char dst[], size_t dstsize, const uint8_t *src, size_t src
 */
 int query_sanitize(char buf[], size_t buflen, const char query[])
 {
-	size_t len;
-	size_t i;
-
-	len = strlen(query);
+	size_t len = strlen(query);
 
 	if ((len + 1) > buflen) {
 		// Output buffer too small
@@ -311,7 +317,7 @@ int query_sanitize(char buf[], size_t buflen, const char query[])
 	}
 
 	// Convert to lower case
-	for (i = 0; i <= len; ++i) {
+	for (size_t i = 0; i <= len; ++i) {
 		buf[i] = tolower(query[i]);
 	}
 
@@ -330,14 +336,18 @@ int port_random(void)
 	return port;
 }
 
-// Parse a port - treats 0 as valid port
-int port_parse(const char beg[], int err)
+bool port_valid(int port)
+{
+	return port > 0 && port <= 65536;
+}
+
+int parse_int(const char *s, int err)
 {
 	char *endptr = NULL;
-	const char *end = beg + strlen(beg);
-	ssize_t port = strtoul(beg, &endptr, 10);
-	if (endptr != beg && endptr == end && (port >= 0 && port <= 65536)) {
-		return port;
+	const char *end = s + strlen(s);
+	ssize_t n = strtoul(s, &endptr, 10);
+	if (endptr != s && endptr == end && n >= INT_MIN && n < INT_MAX) {
+		return n;
 	} else {
 		return err;
 	}
@@ -360,16 +370,13 @@ bool port_set(IP *addr, uint16_t port)
 // Fill buffer with random bytes
 int bytes_random(uint8_t buffer[], size_t size)
 {
-	int fd;
-	int rc;
-
-	fd = open("/dev/urandom", O_RDONLY);
+	int fd = open("/dev/urandom", O_RDONLY);
 	if (fd < 0) {
 		log_error("Failed to open /dev/urandom");
 		exit(1);
 	}
 
-	rc = read(fd, buffer, size);
+	int rc = read(fd, buffer, size);
 
 	close(fd);
 

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <ctype.h>
 
 #include "main.h"
 #include "conf.h"
@@ -18,7 +19,6 @@
 #include "net.h"
 #include "unix.h"
 #include "announces.h"
-#include "searches.h"
 #include "ext-cmd.h"
 
 
@@ -33,15 +33,15 @@ PROGRAM_NAME" Control Program - Send commands to a DHTd instance.\n\n"
 static const char* g_server_usage =
 	"Usage:\n"
 	"	status\n"
-	"	search [start|stop] <query>\n"
-	"	announce [<query>[:<port>] [<minutes>]]\n"
-	"	ping <addr>\n";
+	"	search [start|stop|results] <hash>\n"
+	"	announce [start|stop] [<hash>[:<port>] [<minutes>]]\n"
+	"	ping <address>\n"
+	"	lookup <hash>\n";
 
 const char* g_server_usage_debug =
-	"	blacklist <addr>\n"
-	"	list blacklist|searches|announcements|peers"
-	"|constants\n"
-	"	list dht_buckets|dht_searches|dht_storage\n";
+	"	blacklist <address>\n"
+	"	list announcements|searches|constants|blacklist\n"
+	"	list peers|buckets|storage\n";
 
 static int g_cmd_sock = -1;
 
@@ -62,37 +62,38 @@ static int cmd_ping(FILE *fp, const char addr_str[], int af)
 	return 0;
 }
 
-static void cmd_blacklist(FILE *fp, const char *addr_str)
+static bool cmd_announce(FILE *fp, const char hash[], const char *port_str, char *minutes_str)
 {
-	IP addr;
-
-	if (addr_parse(&addr, addr_str, NULL, gconf->af)) {
-		kad_blacklist(&addr);
-		fprintf(fp, "Added to blacklist: %s\n", str_addr(&addr));
-	} else {
-		fprintf(fp, "Invalid address.\n");
-	}
-}
-
-static void cmd_announce(FILE *fp, const char query[], int port, int minutes)
-{
-	time_t lifetime;
 	uint8_t id[SHA1_BIN_LENGTH];
+	time_t lifetime;
+	int minutes;
+	int port;
 
-	if (minutes < 0) {
-		lifetime = LONG_MAX;
+	if (port_str) {
+		port = parse_int(port_str, -1);
+		if (!port_valid(port)) {
+			fprintf(fp, "invalid port: %s\n", port_str);
+			return false;
+		}
 	} else {
-		// Round up to multiple of 30 minutes
-		minutes = (30 * (minutes / 30 + 1));
-		lifetime = (time_now_sec() + (minutes * 60));
-	}
-
-	if (port < 1 || port > 65535) {
 		port = gconf->dht_port;
 	}
 
-	if (!parse_hex_id(id, sizeof(id), query, strlen(query))) {
-		fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", query);
+	if (minutes_str) {
+		minutes = parse_int(minutes_str, -1);
+		if (minutes < 0) {
+			fprintf(fp, "invalid minutes: %s\n", minutes_str);
+			return false;
+		}
+		// Round up to multiple of 30 minutes
+		minutes = (30 * (minutes / 30 + 1));
+		lifetime = (time_now_sec() + (minutes * 60));
+	} else {
+		lifetime = LONG_MAX;
+	}
+
+	if (!parse_hex_id(id, sizeof(id), hash, strlen(hash))) {
+		fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", hash);
 	} else if(announces_add(id, port, lifetime)) {
 		if (minutes < 0) {
 			fprintf(fp, "Start regular announcements for the entire run time (port %d).\n", port);
@@ -101,122 +102,145 @@ static void cmd_announce(FILE *fp, const char query[], int port, int minutes)
 		}
 	} else {
 		fprintf(fp, "Failed to add announcement.\n");
+		return false;
 	}
+
+	return true;
 }
 
-// Match a format string with only %n at the end
-static int match(const char request[], const char fmt[])
+// separate a string into a list of arguments (int argc, char **argv)
+static int setargs(char **argv, int max_argv, char *args)
 {
-	int n = -1;
-	sscanf(request, fmt, &n);
-	return (n > 0 && request[n] == '\0');
+	int count = 0;
+
+	while (isspace(*args)) {
+		++args;
+	}
+
+	while (*args) {
+		if (count < max_argv) {
+			argv[count] = args;
+		} else {
+			log_error("too many arguments from command line");
+			break;
+		}
+
+		while (*args && !isspace(*args)) {
+			++args;
+		}
+
+		if (*args) {
+			*args++ = '\0';
+		}
+
+		while (isspace(*args)) {
+			++args;
+		}
+
+		count++;
+	}
+
+	argv[count] = NULL;
+	return count;
 }
 
-static void cmd_exec(FILE *fp, const char request[], int allow_debug)
+static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 {
-	const struct search_t *search;
-	const struct result_t *result;
-	const struct announcement_t *value;
-	int minutes;
-	int found;
-	char query[256];
-	char address[256];
 	uint8_t id[SHA1_BIN_LENGTH];
-	int count;
-	int port;
-	char d; // dummy marker
+	char *argv[8];
+	int argc = setargs(&argv[0], ARRAY_SIZE(argv), request);
 
-	if (sscanf(request, " ping%*[ ]%255[^ \n\t] %c", address, &d) == 1) {
+	if (argc == 2 && !strcmp("ping", argv[0])) {
+		const char *address = argv[1];
+		int count = 0;
+
 		if (gconf->af == AF_UNSPEC) {
-			count = cmd_ping(fp, address, AF_INET);
+			count += cmd_ping(fp, address, AF_INET);
 			count += cmd_ping(fp, address, AF_INET6);
 		} else {
-			count = cmd_ping(fp, address, gconf->af);
+			count += cmd_ping(fp, address, gconf->af);
 		}
 
 		if (count == 0) {
 			fprintf(fp, "Failed to parse/resolve address.\n");
 		}
-	} else if (sscanf(request, " search stop%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
-		if (parse_hex_id(id, sizeof(id), query, strlen(query))) {
-			if (kad_search_stop(id)) {
-				fprintf(fp, "Done.\n");
+	} else if (argc == 3 && !strcmp("search", argv[0])) {
+		const char *cmd = argv[1];
+		const char *id_str = argv[2];
+		if (parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
+			if (!strcmp("start", cmd)) {
+				kad_start_search(fp, id, 0);
+			} else if (!strcmp("stop", cmd)) {
+				kad_stop_search(fp, id);
+			} else if (!strcmp("results", cmd)) {
+				kad_print_results(fp, id);
 			} else {
-				fprintf(fp, "Search does not exist.\n");
+				fprintf(fp, "invalid search command\n");
 			}
 		} else {
-			fprintf(fp, "Failed to parse hex id: %s\n", query);
+			fprintf(fp, "Failed to parse id.\n");
 		}
-	} else if (sscanf(request, " search start%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
-		if (parse_hex_id(id, sizeof(id), query, strlen(query))) {
-			// search hex query
-			search = kad_search_start(id);
-
-			if (search) {
-				found = 0;
-				for (result = search->results; result; result = result->next) {
-					fprintf(fp, "%s\n", str_addr(&result->addr));
-					found = 1;
-				}
-
-				if (!found) {
-					if (search->start_time == time_now_sec()) {
-						fprintf(fp, "Search started.\n");
-					} else {
-						fprintf(fp, "Search in progress.\n");
-					}
-				}
-			} else {
-				fprintf(fp, "Some error occurred.\n");
-			}
+	} else if (argc == 2 && !strcmp("lookup", argv[0])) {
+		const char *id_str = argv[1];
+		
+		if (parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
+			kad_print_node_addresses(fp, id);
 		} else {
-			fprintf(fp, "Failed to parse hex id: %s\n", query);
+			fprintf(fp, "Failed to parse id.\n");
 		}
-	} else if (match(request, " status %n")) {
+	} else if (argc == 1 && !strcmp("status", argv[0])) {
 		// Print node id and statistics
 		kad_status(fp);
-		fprintf(fp, "searches: %d\n", searches_count());
-		fprintf(fp, "announcements: %d\n", announces_count());
-	} else if (match(request, " announce %n")) {
-		// Announce all values
-		count = 0;
-		value = announces_get();
-		while (value) {
-			kad_announce_once(value->id, value->port);
-			fprintf(fp, " announce %s:%d\n", str_id(&value->id[0]), value->port);
-			count += 1;
-			value = value->next;
-		}
-		fprintf(fp, "Started %d announcements.\n", count);
-	} else if (sscanf(request, " announce%*[ ]%255[^: \n\t] %c", query, &d) == 1) {
-		cmd_announce(fp, query, gconf->dht_port, -1);
-	} else if (sscanf(request, " announce%*[ ]%255[^: \n\t]:%d %c", query, &port, &d) == 2) {
-		cmd_announce(fp, query, port, -1);
-	} else if (sscanf(request, " announce%*[ ]%255[^: \n\t] %d %c", query, &minutes, &d) == 2) {
-		cmd_announce(fp, query, -1, minutes);
-	} else if (sscanf(request, " announce%*[ ]%255[^: \n\t]:%d %d %c", query, &port, &minutes, &d) == 3) {
-		cmd_announce(fp, query, port, minutes);
-	} else if (match(request, " list%*[ ]%*s %n") && allow_debug) {
-		if (sscanf(request, "blacklist%*[ ]%255[^: \n\t]", query) == 1) {
-			cmd_blacklist(fp, query);
-		} else if (match(request, " list%*[ ]blacklist %n")) {
-			kad_debug_blacklist(fp);
-		} else if (match(request, " list%*[ ]constants %n")) {
-			kad_debug_constants(fp);
-		} else if (match(request, " list%*[ ]peers %n")) {
-			if (kad_export_peers(fp) == 0) {
-				fprintf(fp, "No good nodes found.\n");
+	} else if (argc > 1 && !strcmp("announce", argv[0])) {
+		const char *cmd = argv[1];
+		if ((argc == 3 || argc == 4) && !strcmp("start", cmd)) {
+			// Announce specific value
+			char *hash = argv[1];
+			char *port = NULL;
+			char *minutes = NULL;
+			char *ptr = strchr(hash, ':');
+			if (ptr) {
+				*ptr = 0;
+				port = ptr + 1; // jump past ':'
 			}
-		} else if (match(request, " list%*[ ]searches %n")) {
-			searches_debug(fp);
-		} else if (match(request, " list%*[ ]announcements %n")) {
+			if (argc == 4) {
+				minutes = argv[2];
+			}
+			cmd_announce(fp, hash, port, minutes);
+		} else if (argc == 3 && !strcmp("stop", cmd)) {
+			const char *id_str = argv[2];
+			if (!parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
+				fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", id_str);
+			} else {
+				announcement_remove(id);
+			}
+		} else {
+			fprintf(fp, "invalid announce command\n");
+		}
+	} else if (argc == 2 && !strcmp("blacklist", argv[0])) {
+		IP address;
+		if (addr_parse(&address, argv[1], NULL, gconf->af)) {
+			kad_blacklist(&address);
+			fprintf(fp, "Added to blacklist: %s\n", str_addr(&address));
+		} else {
+			fprintf(fp, "Invalid address.\n");
+		}
+	} else if (argc == 2 && !strcmp("list", argv[0])) {
+		const char *cmd = argv[1];
+		if (!strcmp("blacklist", cmd)) {
+			kad_print_blacklist(fp);
+		} else if (!strcmp("constants", cmd)) {
+			kad_print_constants(fp);
+		} else if (allow_debug && !strcmp("peers", cmd)) {
+			kad_export_peers(fp);
+		} else if (!strcmp("announcements", cmd)) {
 			announces_debug(fp);
-		} else if (match(request, " list%*[ ]dht_buckets %n")) {
-			kad_debug_buckets(fp);
-		} else if (match(request, " list%*[ ]dht_searches %n")) {
-			kad_debug_searches(fp);
-		} else if (match(request, " list%*[ ]dht_storage %n")) {
-			kad_debug_storage(fp);
+		} else if (allow_debug && !strcmp("buckets", cmd)) {
+			kad_print_buckets(fp);
+		} else if (!strcmp("searches", cmd)) {
+			kad_print_searches(fp, false);
+		} else if (allow_debug && !strcmp("storage", cmd)) {
+			kad_print_storage(fp);
 		} else {
 			fprintf(fp, "Unknown command.\n");
 		}
@@ -265,9 +289,9 @@ static void cmd_client_handler(int rc, int clientsock)
 			if (next) {
 				*next = '\0'; // replace newline with 0
 				#ifdef DEBUG
-					cmd_exec(current_clientfd, cur, 1);
+					cmd_exec(current_clientfd, cur, true);
 				#else
-					cmd_exec(current_clientfd, cur, 0);
+					cmd_exec(current_clientfd, cur, false);
 				#endif
 				fflush(current_clientfd);
 				cur = next + 1;
@@ -338,7 +362,7 @@ static void cmd_console_handler(int rc, int fd)
 	}
 
 	// Output to stdout (not stdin)
-	cmd_exec(stdout, request, 1);
+	cmd_exec(stdout, request, true);
 }
 
 bool cmd_setup(void)
