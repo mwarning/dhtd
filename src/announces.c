@@ -100,7 +100,7 @@ struct announcement_t *announces_add(FILE *fp, uint8_t id[], int port, time_t li
 		// Trigger immediate handling
 		g_announces_announce = 0;
 
-		fprintf(fp, "Announcement already exists. Triggered again.\n");
+		if (fp) fprintf(fp, "Announcement already exists. Triggered again.\n");
 		return cur;
 	}
 
@@ -124,7 +124,7 @@ struct announcement_t *announces_add(FILE *fp, uint8_t id[], int port, time_t li
 	// Trigger immediate handling
 	g_announces_announce = 0;
 
-	fprintf(fp, "Announcement started (port %d).\n", port);
+	if (fp) fprintf(fp, "Announcement started (port %d).\n", port);
 
 	return new;
 }
