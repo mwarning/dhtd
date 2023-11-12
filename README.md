@@ -1,6 +1,6 @@
 # DHTd
 
-Run a [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect with the BitTorrent network and announce identifiers and query them from the command line.
+Run a [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect to the BitTorrent network. Announce identifiers and query them from the command line.
 
 Supported are a command line interface and local peer discovery.
 
