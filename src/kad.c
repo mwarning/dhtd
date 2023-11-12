@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "net.h"
 #include "announces.h"
+#include "results.h"
 
 // include dht.c instead of dht.h to access private vars
 #include "dht.c"
@@ -28,82 +29,21 @@ static time_t g_dht_maintenance = 0;
 static int g_dht_socket4 = -1;
 static int g_dht_socket6 = -1;
 
-
-/*
-* Put an address and port into a sockaddr_storages struct.
-* Both addr and port are in network byte order.
-*/
-void to_addr(IP *out_addr, const void *in_addr, size_t len, uint16_t port)
-{
-	memset(out_addr, '\0', sizeof(IP));
-
-	if (len == 4) {
-		IP4 *a = (IP4 *) out_addr;
-		a->sin_family = AF_INET;
-		a->sin_port = port;
-		memcpy(&a->sin_addr.s_addr, in_addr, 4);
-	}
-
-	if (len == 16) {
-		IP6 *a = (IP6 *) out_addr;
-		a->sin6_family = AF_INET6;
-		a->sin6_port = port;
-		memcpy(&a->sin6_addr.s6_addr, in_addr, 16);
-	}
-}
-
-static void on_new_search_result(const uint8_t id[], const IP *address)
-{
-	char command[1024];
-
-	log_debug("on_new_search_result: %s %s", str_id(id), str_addr(address));
-
-	// call script if configured
-	if (gconf->execute_path) {
-		int n = snprintf(command, sizeof(command), "%s %s %s &", gconf->execute_path, str_id(id), str_addr(address));
-		if (n > 0 && n < sizeof(command)) {
-			system(command);
-		} else {
-			log_error("kad: command too long");
-		}
-	}
-}
-
-typedef struct {
-	uint8_t addr[16];
-	uint16_t port;
-} dht_addr6_t;
-
-typedef struct {
-	uint8_t addr[4];
-	uint16_t port;
-} dht_addr4_t;
-
-
 // This callback is called when a search result arrives or a search completes
 void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const void *data, size_t data_len)
 {
-	dht_addr4_t *data4;
-	dht_addr6_t *data6;
-	IP address;
-
 	switch (event) {
 		case DHT_EVENT_VALUES:
-			data4 = (dht_addr4_t *) data;
-			for (int i = 0; i < (data_len / sizeof(dht_addr4_t)); ++i) {
-				to_addr(&address, &data4[i].addr, 4, data4[i].port);
-				on_new_search_result(info_hash, &address);
-			}
+			results_add(info_hash, AF_INET, data, data_len);
 			break;
 		case DHT_EVENT_VALUES6:
-			data6 = (dht_addr6_t *) data;
-			for (int i = 0; i < (data_len / sizeof(dht_addr6_t)); ++i) {
-				to_addr(&address, &data6[i].addr, 16, data6[i].port);
-				on_new_search_result(info_hash, &address);
-			}
+			results_add(info_hash, AF_INET6, data, data_len);
 			break;
 		case DHT_EVENT_SEARCH_DONE:
 		case DHT_EVENT_SEARCH_DONE6:
+			break;
+		case DHT_EVENT_SEARCH_EXPIRED:
+			results_clear(info_hash);
 			break;
 	}
 }
@@ -231,7 +171,7 @@ bool kad_setup(void)
 
 #ifdef DEBUG
 	// Let the DHT output debug text
-	//dht_debug = stdout;
+	dht_debug = stdout;
 #endif
 
 	bytes_random(node_id, SHA1_BIN_LENGTH);
@@ -354,7 +294,7 @@ void kad_status(FILE *fp)
 		"DHT storage: %d entries with %d addresses\n"
 		"DHT searches: %d IPv4 (%d done), %d IPv6 active (%d done)\n"
 		"DHT announcements: %d\n"
-		"DHT blacklist: %d\n",
+		"DHT blocklist: %d\n",
 		dhtd_version_str,
 		str_id(myid),
 		str_af(gconf->af), gconf->dht_ifname ? gconf->dht_ifname : "<any>",
@@ -371,47 +311,20 @@ bool kad_ping(const IP* addr)
 	return dht_ping_node((struct sockaddr *)addr, addr_len(addr)) >= 0;
 }
 
-void kad_print_results(FILE *fp, const uint8_t id[])
-{
-	IP address;
-	unsigned count = 0;
-
-	struct storage *st = find_storage(id);
-	if (st) {
-		for (size_t i = 0; i < st->numpeers; i++) {
-			uint16_t port = htons(st->peers[i].port);
-			switch (st->peers[i].len) {
-			case 4:
-				to_addr(&address, st->peers[i].ip, 4, port);
-				count++;
-				break;
-			case 16:
-				to_addr(&address, st->peers[i].ip, 16, port);
-				count++;
-				break;
-			default:
-				continue;
-			}
-			fprintf(fp, "%s\n", str_addr(&address));
-		}
-	}
-	fprintf(fp, "Found %u results.\n", (unsigned) count);
-}
-
 bool kad_start_search(FILE *fp, const uint8_t id[], uint16_t port)
 {
 	int af = gconf->af;
 	int rc4 = -1;
 	int rc6 = -1;
 
-	//log_debug("KAD: Start DHT search %s:%hu", str_id(id), port);
+	//results_clear(id);
 
 	if (af == AF_UNSPEC || af == AF_INET) {
-		rc4 = dht_search(id, port, AF_INET, NULL /*dht_callback_func*/, NULL);
+		rc4 = dht_search(id, port, AF_INET, dht_callback_func, NULL);
 	}
 
 	if (af == AF_UNSPEC || af == AF_INET6) {
-		rc6 = dht_search(id, port, AF_INET6, NULL /*dht_callback_func*/, NULL);
+		rc6 = dht_search(id, port, AF_INET6, dht_callback_func, NULL);
 	}
 
 	if (rc4 == 1 || rc6 == 1) {
@@ -429,73 +342,25 @@ bool kad_start_search(FILE *fp, const uint8_t id[], uint16_t port)
 	return false;
 }
 
-bool kad_stop_search(FILE *fp, const uint8_t id[])
-{
-	struct search *search = searches;
-
-	while (search) {
-		if (memcmp(search->id, id, SHA1_BIN_LENGTH) == 0) {
-			break;
-		}
-		search = search->next;
-	}
-
-	if (search) {
-		if (search->done) {
-			if (fp) fprintf(fp, "Search already done.\n");
-		} else {
-			search->done = 1;
-			if (fp) fprintf(fp, "Search stopped.\n");
-		}
-		return true;
-	} else {
-		if (fp) fprintf(fp, "Search not found.\n");
-		return false;
-	}
-}
-
-/*
-* Search the address of the node whose node id matches id.
-* The search will be performed on the results of kad_search().
-* The port in the returned address refers to the kad instance.
-*/
-void kad_print_node_addresses(FILE *fp, const uint8_t id[])
-{
-	struct search *sr = searches;
-	while (sr) {
-		if (sr->af == gconf->af && id_equal(sr->id, id)) {
-			for (size_t i = 0; i < sr->numnodes; ++i) {
-				if (id_equal(sr->nodes[i].id, id)) {
-					fprintf(fp, "%s", str_addr(&sr->nodes[i].ss));
-				}
-			}
-		}
-		sr = sr->next;
-	}
-}
-
-bool kad_blacklist(const IP* addr)
+bool kad_block(const IP* addr)
 {
 	blacklist_node(NULL, (struct sockaddr *) addr, sizeof(IP));
 
 	return true;
 }
 
-// Export known peers; the maximum is 300 nodes
+// Export known peers; the maximum is 400 nodes
 int kad_export_peers(FILE *fp)
 {
-	IP4 addr4[150];
-	IP6 addr6[150];
-	int num4;
-	int num6;
-	int i;
+	IP4 addr4[200];
+	IP6 addr6[200];
 
-	num6 = ARRAY_SIZE(addr4);
-	num4 = ARRAY_SIZE(addr6);
+	int num6 = ARRAY_SIZE(addr4);
+	int num4 = ARRAY_SIZE(addr6);
 
 	dht_get_nodes(addr4, &num4, addr6, &num6);
 
-	for (i = 0; i < num4; i++) {
+	for (size_t i = 0; i < num4; i++) {
 #ifdef __CYGWIN__
 		fprintf(fp, "%s\r\n", str_addr((IP*) &addr4[i]));
 #else
@@ -503,7 +368,7 @@ int kad_export_peers(FILE *fp)
 #endif
 	}
 
-	for (i = 0; i < num6; i++) {
+	for (size_t i = 0; i < num6; i++) {
 #ifdef __CYGWIN__
 		fprintf(fp, "%s\r\n", str_addr((IP*) &addr6[i]));
 #else
@@ -526,8 +391,8 @@ void kad_print_buckets(FILE* fp)
 		struct node * n = b->nodes;
 		for (i = 0; n; ++i) {
 			fprintf(fp, "   id: %s\n", str_id(n->id));
-			fprintf(fp, "     address: %s\n", str_addr(&n->ss));
-			fprintf(fp, "     pinged: %d\n", n->pinged);
+			fprintf(fp, "	 address: %s\n", str_addr(&n->ss));
+			fprintf(fp, "	 pinged: %d\n", n->pinged);
 			n = n->next;
 		}
 		fprintf(fp, "  Found %u nodes.\n", (unsigned) i);
@@ -537,9 +402,9 @@ void kad_print_buckets(FILE* fp)
 }
 
 // Print searches
-void kad_print_searches(FILE *fp, bool do_print_nodes)
+void kad_print_searches(FILE *fp)
 {
-	size_t i, j;
+	size_t i;
 
 	struct search *s = searches;
 	for (i = 0; s; ++i) {
@@ -549,6 +414,8 @@ void kad_print_searches(FILE *fp, bool do_print_nodes)
 			(unsigned) s->port,
 			s->done ? "true" : "false"
 		);
+		fprintf(fp, "  results: %u\n", (unsigned) results_count(s->id));
+		/*
 		if (do_print_nodes) {
 			for (j = 0; j < s->numnodes; ++j) {
 				struct search_node *sn = &s->nodes[j];
@@ -560,7 +427,7 @@ void kad_print_searches(FILE *fp, bool do_print_nodes)
 			fprintf(fp, "  Found %u nodes.\n", (unsigned) j);
 		} else {
 			fprintf(fp, "  nodes: %u\n", (unsigned) s->numnodes);
-		}
+		}*/
 		s = s->next;
 	}
 
@@ -570,7 +437,6 @@ void kad_print_searches(FILE *fp, bool do_print_nodes)
 // Print announced ids we have received
 void kad_print_storage(FILE *fp)
 {
-	IP addr;
 	size_t i, j;
 
 	struct storage *s = storage;
@@ -578,8 +444,7 @@ void kad_print_storage(FILE *fp)
 		fprintf(fp, " id: %s\n", str_id(s->id));
 		for (j = 0; j < s->numpeers; ++j) {
 			struct peer *p = &s->peers[j];
-			to_addr(&addr, &p->ip, p->len, htons(p->port));
-			fprintf(fp, "   peer: %s\n", str_addr(&addr));
+			fprintf(fp, "   peer: %s\n", str_addr2(&p->ip[0], p->len, p->port));
 		}
 		fprintf(fp, "  Found %u peers.\n", (unsigned) j);
 		s = s->next;
@@ -587,7 +452,7 @@ void kad_print_storage(FILE *fp)
 	fprintf(fp, " Found %u stored hashes from received announcements.\n", (unsigned) i);
 }
 
-void kad_print_blacklist(FILE *fp)
+void kad_print_blocklist(FILE *fp)
 {
 	size_t i;
 
@@ -595,7 +460,7 @@ void kad_print_blacklist(FILE *fp)
 		fprintf(fp, " %s\n", str_addr(&blacklist[i]));
 	}
 
-	fprintf(fp, " Found %u blacklisted addresses.\n", (unsigned) i);
+	fprintf(fp, " Found %u blocked addresses.\n", (unsigned) i);
 }
 
 void kad_print_constants(FILE *fp)
@@ -609,6 +474,6 @@ void kad_print_constants(FILE *fp)
 	// Maximum number of peers for each announced hash we track
 	fprintf(fp, "DHT_MAX_PEERS: %d\n", DHT_MAX_PEERS);
 
-	// Maximum number of blacklisted nodes
+	// Maximum number of blocked nodes
 	fprintf(fp, "DHT_MAX_BLACKLISTED: %d\n", DHT_MAX_BLACKLISTED);
 }

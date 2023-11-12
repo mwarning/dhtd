@@ -18,6 +18,7 @@
 #include "kad.h"
 #include "net.h"
 #include "unix.h"
+#include "results.h"
 #include "announces.h"
 #include "ext-cli.h"
 
@@ -26,27 +27,62 @@ static const char *g_client_usage =
 PROGRAM_NAME" Control Program - Send commands to a DHTd instance.\n\n"
 "Usage: dhtd-ctl [OPTIONS] [COMMANDS]\n"
 "\n"
-" -p <file>	Connect to this unix socket (Default: "CLI_PATH")\n"
-" -h		Print this help.\n"
+" -p <file> Connect to this unix socket (Default: "CLI_PATH")\n"
+" -h        Print this help.\n"
 "\n";
 
 static const char* g_server_usage =
 	"Usage:\n"
-	"	status\n"
-	"	search [start|stop|results] <hash>\n"
-	"	announce [start|stop] [<hash>[:<port>] [<minutes>]]\n"
-	"	ping <address>\n"
-	"	lookup <hash>\n";
+	"  status\n"
+	"  help\n"
+	"  query\n"
+	"  search <id>\n"
+	"  results <id>\n"
+	"  announce-start <id> <port>\n"
+	"  announce-stop <id>\n"
+	"  searches\n"
+	"  announcements\n"
+	"  block <address>\n"
+	"  peer <address>\n"
+	"  constants|blocklist|peers|buckets|storage\n";
 
-const char* g_server_usage_debug =
-	"	blacklist <address>\n"
-	"	list announcements|searches|constants|blacklist\n"
-	"	list peers|buckets|storage\n";
+static const char* g_server_help = 
+	"  DHTd allows to search for peers that have announced a identifier.\n"
+	"  The result is a list of IP addresses and ports of those peers that\n"
+	"  have announcement it. DHTd also allows to perform announcements.\n"
+	"\n"
+	"  status\n"
+	"    The current state of this node.\n"
+	"  search <id>\n"
+	"    Start a search for announced values.\n"
+	"  results <id>\n"
+	"    Print the results of a search.\n"
+	"  query <id>\n"
+	"    Start search and print results.\n"
+	"  announce-start <id> <port>\n"
+	"    Start to announce an id along with a network port.\n"
+	"  announce-stop <id>\n"
+	"    Stop the announcement.\n"
+	"  searches\n"
+	"    Print a list of all searches. They expire after 20min.\n"
+	"  announcements\n"
+	"    Print a list of all announcements."
+	"  peer <address>:<port>\n"
+	"    Add a peer by address.\n"
+	"  block <address>\n"
+	"    Block a certain IP address for some time.\n"
+	"  constants|blocklist|peers|buckets|storage\n"
+	"    Print various internal data.\n"
+	" -----\n"
+	"  id: 20 bytes as base16 (hexadecimal) or base32 string\n"
+	"  port: Network number between 1-65536\n"
+	"  address: IPv4 or IPv6 address\n"
+	"";
 
 static int g_cli_sock = -1;
 
 
-static int cmd_ping(FILE *fp, const char addr_str[], int af)
+static int cmd_peer(FILE *fp, const char addr_str[], int af)
 {
 	IP addr;
 
@@ -62,69 +98,25 @@ static int cmd_ping(FILE *fp, const char addr_str[], int af)
 	return 0;
 }
 
-static bool cmd_announce(FILE *fp, const char hash[], const char *port_str, char *minutes_str)
-{
-	uint8_t id[SHA1_BIN_LENGTH];
-	time_t lifetime;
-	int minutes;
-	int port;
-
-	if (port_str) {
-		port = parse_int(port_str, -1);
-		if (!port_valid(port)) {
-			fprintf(fp, "invalid port: %s\n", port_str);
-			return false;
-		}
-	} else {
-		port = gconf->dht_port;
-	}
-
-	if (minutes_str) {
-		minutes = parse_int(minutes_str, -1);
-		if (minutes < 0) {
-			fprintf(fp, "invalid minutes: %s\n", minutes_str);
-			return false;
-		}
-		// Round up to multiple of 30 minutes
-		minutes = (30 * (minutes / 30 + 1));
-		lifetime = (time_now_sec() + (minutes * 60));
-	} else {
-		lifetime = LONG_MAX;
-	}
-
-	if (!parse_hex_id(id, sizeof(id), hash, strlen(hash))) {
-		fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", hash);
-	} else if(announces_add(id, port, lifetime)) {
-		if (minutes < 0) {
-			fprintf(fp, "Start regular announcements for the entire run time (port %d).\n", port);
-		} else {
-			fprintf(fp, "Start regular announcements for %d minutes (port %d).\n", minutes, port);
-		}
-	} else {
-		fprintf(fp, "Failed to add announcement.\n");
-		return false;
-	}
-
-	return true;
-}
-
 // separate a string into a list of arguments (int argc, char **argv)
-static int setargs(char **argv, int max_argv, char *args)
+static int setargs(char **argv, int argv_size, char *args)
 {
 	int count = 0;
 
+	// skip spaces
 	while (isspace(*args)) {
 		++args;
 	}
 
 	while (*args) {
-		if (count < max_argv) {
+		if ((count + 1) < argv_size) {
 			argv[count] = args;
 		} else {
-			log_error("too many arguments from command line");
+			log_error("CLI: too many arguments");
 			break;
 		}
 
+		// parse word
 		while (*args && !isspace(*args)) {
 			++args;
 		}
@@ -133,6 +125,7 @@ static int setargs(char **argv, int max_argv, char *args)
 			*args++ = '\0';
 		}
 
+		// skip spaces
 		while (isspace(*args)) {
 			++args;
 		}
@@ -140,9 +133,50 @@ static int setargs(char **argv, int max_argv, char *args)
 		count++;
 	}
 
-	argv[count] = NULL;
+	argv[MIN(count, argv_size - 1)] = NULL;
+
 	return count;
 }
+
+enum {
+	oHelp,
+	oPeer,
+	oSearch,
+	oResults,
+	oQuery,
+	oStatus,
+	oAnnounceStart,
+	oAnnounceStop,
+	oPrintBlocked,
+	oBlock,
+	oPrintConstants,
+	oPrintPeers,
+	oPrintAnnouncements,
+	oPrintBuckets,
+	oPrintSearches,
+	oPrintStorage
+};
+
+static const option_t g_options[] = {
+	{"h", 1, oHelp},
+	{"help", 1, oHelp},
+	{"peer", 2, oPeer},
+	{"search", 2, oSearch},
+	{"results", 2, oResults},
+	{"query", 2, oQuery},
+	{"status", 1, oStatus},
+	{"announce-start", 3, oAnnounceStart},
+	{"announce-stop", 2, oAnnounceStop},
+	{"block", 2, oBlock},
+	{"blocklist", 1, oPrintBlocked},
+	{"constants", 1, oPrintConstants},
+	{"peers", 1, oPrintPeers},
+	{"announcements", 1, oPrintAnnouncements},
+	{"buckets", 1, oPrintBuckets},
+	{"searches", 1, oPrintSearches},
+	{"storage", 1, oPrintStorage},
+	{NULL, 0, 0}
+};
 
 static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 {
@@ -150,107 +184,112 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 	char *argv[8];
 	int argc = setargs(&argv[0], ARRAY_SIZE(argv), request);
 
-	if (argc == 2 && !strcmp("ping", argv[0])) {
+	if (argc == 0) {
+		// Print usage
+		fprintf(fp, "%s", g_server_usage);
+		return;
+	}
+
+	const option_t *option = find_option(g_options, argv[0]);
+
+	if (option == NULL) {
+		fprintf(fp, "Unknown command.\n");
+		return;
+	}
+
+	if (option->num_args != argc) {
+		fprintf(fp, "Unexpected number of arguments.\n");
+		return;
+	}
+
+	// parse identifier
+	switch (option->code) {
+		case oSearch: case oResults: case oQuery: case oBlock: case oAnnounceStart: case oAnnounceStop:
+		if (!parse_hex_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
+			fprintf(fp, "Failed to parse identifier.\n");
+			return;
+		}
+	}
+
+	switch (option->code) {
+	case oHelp:
+		fprintf(fp, "%s", g_server_help);
+		break;
+	case oPeer: {
 		const char *address = argv[1];
 		int count = 0;
 
 		if (gconf->af == AF_UNSPEC) {
-			count += cmd_ping(fp, address, AF_INET);
-			count += cmd_ping(fp, address, AF_INET6);
+			count += cmd_peer(fp, address, AF_INET);
+			count += cmd_peer(fp, address, AF_INET6);
 		} else {
-			count += cmd_ping(fp, address, gconf->af);
+			count += cmd_peer(fp, address, gconf->af);
 		}
 
 		if (count == 0) {
 			fprintf(fp, "Failed to parse/resolve address.\n");
 		}
-	} else if (argc == 3 && !strcmp("search", argv[0])) {
-		const char *cmd = argv[1];
-		const char *id_str = argv[2];
-		if (parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
-			if (!strcmp("start", cmd)) {
-				kad_start_search(fp, id, 0);
-			} else if (!strcmp("stop", cmd)) {
-				kad_stop_search(fp, id);
-			} else if (!strcmp("results", cmd)) {
-				kad_print_results(fp, id);
-			} else {
-				fprintf(fp, "invalid search command\n");
-			}
-		} else {
-			fprintf(fp, "Failed to parse id.\n");
-		}
-	} else if (argc == 2 && !strcmp("lookup", argv[0])) {
-		const char *id_str = argv[1];
-		
-		if (parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
-			kad_print_node_addresses(fp, id);
-		} else {
-			fprintf(fp, "Failed to parse id.\n");
-		}
-	} else if (argc == 1 && !strcmp("status", argv[0])) {
-		// Print node id and statistics
+		break;
+	}
+	case oQuery:
+		kad_start_search(NULL, id, 0);
+		results_print(fp, id);
+		break;
+	case oSearch:
+		kad_start_search(fp, id, 0);
+		break;
+	case oResults:
+		results_print(fp, id);
+		break;
+	case oStatus:
 		kad_status(fp);
-	} else if (argc > 1 && !strcmp("announce", argv[0])) {
-		const char *cmd = argv[1];
-		if ((argc == 3 || argc == 4) && !strcmp("start", cmd)) {
-			// Announce specific value
-			char *hash = argv[1];
-			char *port = NULL;
-			char *minutes = NULL;
-			char *ptr = strchr(hash, ':');
-			if (ptr) {
-				*ptr = 0;
-				port = ptr + 1; // jump past ':'
-			}
-			if (argc == 4) {
-				minutes = argv[2];
-			}
-			cmd_announce(fp, hash, port, minutes);
-		} else if (argc == 3 && !strcmp("stop", cmd)) {
-			const char *id_str = argv[2];
-			if (!parse_hex_id(id, sizeof(id), id_str, strlen(id_str))) {
-				fprintf(fp, "Invalid query: %s (no 20 byte hex string)\n", id_str);
-			} else {
-				announcement_remove(id);
-			}
-		} else {
-			fprintf(fp, "invalid announce command\n");
+		break;
+	case oAnnounceStart: {
+		int port = parse_int(argv[2], -1);
+		if (port == 0) {
+			// use own DHT port
+			port = gconf->dht_port;
 		}
-	} else if (argc == 2 && !strcmp("blacklist", argv[0])) {
+		if (port_valid(port)) {
+			announces_add(fp, id, port, LONG_MAX);
+		} else {
+			fprintf(fp, "Invalid port: %s\n", argv[2]);
+		}
+		break;
+	}
+	case oAnnounceStop:
+		announcement_remove(id);
+		break;
+	case oBlock: {
 		IP address;
 		if (addr_parse(&address, argv[1], NULL, gconf->af)) {
-			kad_blacklist(&address);
-			fprintf(fp, "Added to blacklist: %s\n", str_addr(&address));
+			kad_block(&address);
+			fprintf(fp, "Added to blocklist: %s\n", str_addr(&address));
 		} else {
 			fprintf(fp, "Invalid address.\n");
 		}
-	} else if (argc == 2 && !strcmp("list", argv[0])) {
-		const char *cmd = argv[1];
-		if (!strcmp("blacklist", cmd)) {
-			kad_print_blacklist(fp);
-		} else if (!strcmp("constants", cmd)) {
-			kad_print_constants(fp);
-		} else if (allow_debug && !strcmp("peers", cmd)) {
-			kad_export_peers(fp);
-		} else if (!strcmp("announcements", cmd)) {
-			announces_debug(fp);
-		} else if (allow_debug && !strcmp("buckets", cmd)) {
-			kad_print_buckets(fp);
-		} else if (!strcmp("searches", cmd)) {
-			kad_print_searches(fp, false);
-		} else if (allow_debug && !strcmp("storage", cmd)) {
-			kad_print_storage(fp);
-		} else {
-			fprintf(fp, "Unknown command.\n");
-		}
-	} else {
-		// Print usage
-		fprintf(fp, "%s", g_server_usage);
-
-		if (allow_debug) {
-			fprintf(fp, "%s", g_server_usage_debug);
-		}
+	}
+	case oPrintSearches:
+		kad_print_searches(fp);
+		break;
+	case oPrintAnnouncements:
+		announces_print(fp);
+		break;
+	case oPrintBlocked:
+		kad_print_blocklist(fp);
+		break;
+	case oPrintConstants:
+		kad_print_constants(fp);
+		break;
+	case oPrintPeers:
+		kad_export_peers(fp);
+		break;
+	case oPrintBuckets:
+		kad_print_buckets(fp);
+		break;
+	case oPrintStorage:
+		kad_print_storage(fp);
+		break;
 	}
 }
 
@@ -416,17 +455,11 @@ static int select_read(int sockfd, char buffer[], int bufsize, struct timeval *t
 
 int cli_client(int argc, char *argv[])
 {
-	char buffer[256];
-	const char *path;
+	char buffer[1024];
 	struct sockaddr_un addr = { 0 };
-	ssize_t size;
-	size_t all;
-	size_t pos;
-	int sock;
-	int i;
 
 	// Default unix socket path
-	path = CLI_PATH;
+	const char *path = CLI_PATH;
 
 	// Skip program name
 	argc -= 1;
@@ -454,30 +487,26 @@ int cli_client(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	for (all = 0, i = 1; i < argc; i++) {
-		all += strlen(argv[i]) + 1;
-	}
-
-	if (all >= sizeof(buffer)) {
-		fprintf(stderr, "Input too long!\n");
-		return EXIT_FAILURE;
-	}
-
 	// Concatenate arguments
-	for (i = 0, pos = 0; i < argc; i++) {
+	size_t pos = 0;
+	for (size_t i = 0; i < argc; i++) {
 		size_t len = strlen(argv[i]);
-		//printf("add %s\n", argv[i]);
+		if ((pos + len + 1) >= sizeof(buffer)) {
+			fprintf(stderr, "Input too long!\n");
+			return EXIT_FAILURE;
+		}
 		memcpy(&buffer[pos], argv[i], len);
 		pos += len;
 		buffer[pos] = ' ';
 		pos += 1;
 	}
+
 	buffer[pos] = '\n';
 	pos += 1;
 
-	sock = socket(AF_LOCAL, SOCK_STREAM, 0);
+	int sock = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if (sock < 0) {
-		fprintf(stderr, "socket(): %s\n", strerror(errno));
+		fprintf(stderr, "socket() %s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -497,7 +526,7 @@ int cli_client(int argc, char *argv[])
 	tv.tv_usec = 200000;
 
 	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) < 0) {
-		fprintf(stderr, "setsockopt(): %s\n", strerror(errno));
+		fprintf(stderr, "setsockopt() %s\n", strerror(errno));
 		goto error;
 	}
 #endif
@@ -506,16 +535,16 @@ int cli_client(int argc, char *argv[])
 	size_t ret = write(sock, buffer, pos);
 
 	if (ret < 0) {
-		fprintf(stderr, "write(): %s\n", strerror(errno));
+		fprintf(stderr, "write() %s\n", strerror(errno));
 		goto error;
 	}
 
 	while (true) {
 		// Receive replies
 #ifdef __CYGWIN__
-		size = select_read(sock, buffer, sizeof(buffer), &tv);
+		ssize_t size = select_read(sock, buffer, sizeof(buffer), &tv);
 #else
-		size = read(sock, buffer, sizeof(buffer));
+		ssize_t size = read(sock, buffer, sizeof(buffer));
 #endif
 		if (size == 0) {
 			// socket closed
@@ -532,6 +561,7 @@ int cli_client(int argc, char *argv[])
 	return EXIT_SUCCESS;
 
 error:
+	printf("K\n");
 	if (sock > 0) {
 		close(sock);
 	}

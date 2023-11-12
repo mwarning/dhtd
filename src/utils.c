@@ -289,7 +289,7 @@ char *bytes_to_base32(char dst[], size_t dstsize, const uint8_t *src, size_t src
 	dstsize--;
 	for (i = 0; i < dstsize; i++) {
 		if (*d < 10) {
-			*d = *d +'0';
+			*d = *d + '0';
 		} else if (*d < 32) {
 			*d = *d - 10 + 'a';
 		} else {
@@ -322,6 +322,20 @@ int query_sanitize(char buf[], size_t buflen, const char query[])
 	}
 
 	return EXIT_SUCCESS;
+}
+
+
+const option_t *find_option(const option_t options[], const char name[])
+{
+	const option_t *option = options;
+	while (option->name && name) {
+		if (0 == strcmp(name, option->name)) {
+			return option;
+		}
+		option++;
+	}
+
+	return NULL;
 }
 
 // Create a random port != 0
@@ -407,31 +421,44 @@ const char *str_af(int af) {
 	}
 }
 
-const char *str_addr(const IP *addr)
+const char *str_addr2(const void *ip, uint8_t length, uint16_t port)
 {
 	static char addrbuf[FULL_ADDSTRLEN];
 	char buf[INET6_ADDRSTRLEN];
 	const char *fmt;
-	int port;
 
-	switch (addr->ss_family) {
-	case AF_INET6:
-		port = ((IP6 *)addr)->sin6_port;
-		inet_ntop(AF_INET6, &((IP6 *)addr)->sin6_addr, buf, sizeof(buf));
+	switch (length) {
+	case 16:
+		inet_ntop(AF_INET6, ip, buf, sizeof(buf));
 		fmt = "[%s]:%d";
 		break;
-	case AF_INET:
-		port = ((IP4 *)addr)->sin_port;
-		inet_ntop(AF_INET, &((IP4 *)addr)->sin_addr, buf, sizeof(buf));
+	case 4:
+		inet_ntop(AF_INET, ip, buf, sizeof(buf));
 		fmt = "%s:%d";
 		break;
 	default:
 		return "<invalid address>";
 	}
 
-	sprintf(addrbuf, fmt, buf, ntohs(port));
+	sprintf(addrbuf, fmt, buf, port);
 
 	return addrbuf;
+}
+
+const char *str_addr(const IP *addr)
+{
+	switch (addr->ss_family) {
+	case AF_INET6: {
+		uint16_t port = ntohs(((IP6 *)addr)->sin6_port);
+		return str_addr2(&((IP6 *)addr)->sin6_addr, 16, port);
+	}
+	case AF_INET: {
+		uint16_t port = ntohs(((IP4 *)addr)->sin_port);
+		return str_addr2(&((IP4 *)addr)->sin_addr, 4, port);
+	}
+	default:
+		return "<invalid address>";
+	}
 }
 
 bool addr_is_localhost(const IP *addr)

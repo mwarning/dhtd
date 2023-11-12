@@ -25,7 +25,6 @@
 struct gconf_t *gconf = NULL;
 
 static const char *g_announce_args[32] = { 0 };
-//static const char *g_search_args[32] = { 0 };
 
 const char *dhtd_version_str = PROGRAM_NAME " " PROGRAM_VERSION " ("
 #ifdef CLI
@@ -125,7 +124,7 @@ void conf_free(void)
 }
 
 // Enumerate all options to keep binary size smaller
-enum OPCODE {
+enum {
 	oAnnounce,
 	oPidFile,
 	oPeerFile,
@@ -137,7 +136,6 @@ enum OPCODE {
 	oIpv4,
 	oIpv6,
 	oPort,
-	//oSearch,
 	oLpdDisable,
 	oServiceInstall,
 	oServiceRemove,
@@ -150,15 +148,8 @@ enum OPCODE {
 	oVersion
 };
 
-struct option_t {
-	const char *name;
-	uint16_t num_args;
-	uint16_t code;
-};
-
-static struct option_t g_options[] = {
+static const option_t g_options[] = {
 	{"--announce", 1, oAnnounce},
-	//{"--search", 1, oSearch},
 	{"--pidfile", 1, oPidFile},
 	{"--peerfile", 1, oPeerFile},
 	{"--peer", 1, oPeer},
@@ -192,21 +183,6 @@ static struct option_t g_options[] = {
 	{"--version", 0, oVersion},
 	{NULL, 0, 0}
 };
-
-static const struct option_t *find_option(const char name[])
-{
-	struct option_t *option;
-
-	option = g_options;
-	while (option->name) {
-		if (0 == strcmp(name, option->name)) {
-			return option;
-		}
-		option++;
-	}
-
-	return NULL;
-}
 
 // Set a string once - error when already set
 static bool conf_str(const char opt[], char *dst[], const char src[])
@@ -248,19 +224,15 @@ static bool conf_load_file(const char path[])
 	char value[256];
 	char line[32 + 256];
 	char dummy[4];
-	char *last;
 	struct stat s;
-	int ret;
-	FILE *file;
-	size_t nline;
 
 	if (stat(path, &s) == 0 && !(s.st_mode & S_IFREG)) {
 		log_error("File expected: %s", path);
 		return false;
 	}
 
-	nline = 0;
-	file = fopen(path, "r");
+	ssize_t nline = 0;
+	FILE *file = fopen(path, "r");
 	if (file == NULL) {
 		log_error("Cannot open file: %s (%s)", path, strerror(errno));
 		return false;
@@ -270,7 +242,7 @@ static bool conf_load_file(const char path[])
 		nline += 1;
 
 		// Cut off comments
-		last = strchr(line, '#');
+		char *last = strchr(line, '#');
 		if (last) {
 			*last = '\0';
 		}
@@ -279,7 +251,7 @@ static bool conf_load_file(const char path[])
 			continue;
 		}
 
-		ret = sscanf(line, " %31s%*[ ]%255s %3s", option, value, dummy);
+		int ret = sscanf(line, " %31s%*[ ]%255s %3s", option, value, dummy);
 
 		if (ret == 1 || ret == 2) {
 			// Prevent recursive inclusion
@@ -324,9 +296,7 @@ static bool array_append(const char **array, size_t array_length, const char ele
 
 static bool conf_set(const char opt[], const char val[])
 {
-	const struct option_t *option;
-
-	option = find_option(opt);
+	const option_t *option = find_option(g_options, opt);
 
 	if (option == NULL) {
 		log_error("Unknown parameter: %s", opt);
@@ -355,18 +325,6 @@ static bool conf_set(const char opt[], const char val[])
 			return false;
 		}
 		break;
-/*
-	case oSearch:
-		if (!is_hex_id(val)) {
-			log_error("Invalid search hash: %s", opt);
-			return false;
-		}
-		if (!array_append(&g_search_args[0], ARRAY_SIZE(g_search_args), val)) {
-			log_error("Too many search entries");
-			return false;
-		}
-		break;
-*/
 	case oPidFile:
 		return conf_str(opt, &gconf->pidfile, val);
 	case oPeerFile:
@@ -457,23 +415,12 @@ bool conf_load(void)
 		const char* arg = g_announce_args[i];
 
 		if (parse_annoucement(id, &port, arg, gconf->dht_port)) {
-			announces_add(id, port, LONG_MAX);
+			announces_add(NULL, id, port, LONG_MAX);
 		} else {
 			log_error("Invalid announcement: %s", arg);
 		}
 	}
-/*
-	for (size_t i = 0; g_search_args[i]; i += 1) {
-		const char* arg = g_search_args[i];
 
-		// what happens when the search times out?
-		if (parse_hex_id(id, sizeof(id), arg, strlen(arg))) {
-			kad_start_search(NULL, id, 0);
-		} else {
-			log_error("Invalid search hash: %s", arg);
-		}
-	}
-*/
 	return true;
 }
 

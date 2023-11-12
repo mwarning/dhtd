@@ -119,8 +119,6 @@ static void peerfile_import(void)
 		return;
 	}
 
-	log_info("PEERFILE: Import peers from %s", filename);
-
 	int num = 0;
 	char linebuf[256];
 	while (fgets(linebuf, sizeof(linebuf), fp) != NULL && gconf->is_running) {
@@ -151,14 +149,16 @@ static void peerfile_import_static(const struct peer *peers)
 	}
 }
 
-int peerfile_add_peer(const char addr_str[])
+bool peerfile_add_peer(const char addr_str[])
 {
 	struct peer *new = (struct peer *) malloc(sizeof(struct peer));
 	new->addr_str = strdup(addr_str);
+
+	// prepend to list
 	new->next = g_peers;
 	g_peers = new;
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 static void peerfile_handle_peerfile(int _rc, int _sock)

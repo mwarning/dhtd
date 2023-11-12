@@ -26,6 +26,13 @@
 // Direct access to time in seconds
 #define time_now_sec() (gconf->time_now)
 
+typedef struct {
+	const char *name;
+	uint16_t num_args;
+	uint16_t code;
+} option_t;
+
+const option_t *find_option(const option_t options[], const char name[]);
 
 bool is_hex_id(const char query[]);
 bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize);
@@ -52,6 +59,7 @@ bool id_equal(const uint8_t id1[], const uint8_t id2[]);
 const char *str_af(int af);
 const char *str_id(const uint8_t id[]);
 const char *str_addr(const IP *addr);
+const char *str_addr2(const void *ip, uint8_t length, uint16_t port);
 
 bool addr_is_localhost(const IP *addr);
 bool addr_is_multicast(const IP *addr);

@@ -12,15 +12,10 @@ void kad_free(void);
 // Ping this node to add it to the node table
 bool kad_ping(const IP *addr);
 
-// Blacklist a specific address
-bool kad_blacklist(const IP* addr);
+// Block a specific address
+bool kad_block(const IP* addr);
 
 bool kad_start_search(FILE *fp, const uint8_t id[], uint16_t port);
-bool kad_stop_search(FILE *fp, const uint8_t id[]);
-
-void kad_print_node_addresses(FILE *fp, const uint8_t id[]);
-
-void kad_print_results(FILE *fp, const uint8_t id[]);
 
 // Export good peers
 int kad_export_peers(FILE *fp);
@@ -35,9 +30,9 @@ int kad_count_nodes(bool good);
 bool kad_announce(const uint8_t id[], int port, time_t lifetime);
 
 void kad_print_buckets(FILE *fp);
-void kad_print_searches(FILE *fp, bool do_print_nodes);
+void kad_print_searches(FILE *fp);
 void kad_print_storage(FILE *fp);
-void kad_print_blacklist(FILE *fp);
+void kad_print_blocklist(FILE *fp);
 void kad_print_constants(FILE *fp);
 
 #endif // _KAD_H_

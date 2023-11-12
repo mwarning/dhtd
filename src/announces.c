@@ -40,7 +40,7 @@ struct announcement_t* announces_find(const uint8_t id[])
 	return NULL;
 }
 
-void announces_debug(FILE *fp)
+void announces_print(FILE *fp)
 {
 	time_t now = time_now_sec();
 	int value_counter = 0;
@@ -49,6 +49,7 @@ void announces_debug(FILE *fp)
 
 	fprintf(fp, "Announcements:\n");
 	fprintf(fp, "interval: %dm\n", ANNOUNCES_INTERVAL / 60);
+
 	while (value) {
 		fprintf(fp, " id: %s\n", str_id(value->id));
 		fprintf(fp, "  port: %d\n", value->port);
@@ -77,7 +78,7 @@ void announces_debug(FILE *fp)
 }
 
 // Announce a sanitized query
-struct announcement_t *announces_add(uint8_t id[], int port, time_t lifetime)
+struct announcement_t *announces_add(FILE *fp, uint8_t id[], int port, time_t lifetime)
 {
 	struct announcement_t *cur;
 	struct announcement_t *new;
@@ -99,6 +100,7 @@ struct announcement_t *announces_add(uint8_t id[], int port, time_t lifetime)
 		// Trigger immediate handling
 		g_announces_announce = 0;
 
+		fprintf(fp, "Announcement already exists. Triggered again.\n");
 		return cur;
 	}
 
@@ -121,6 +123,8 @@ struct announcement_t *announces_add(uint8_t id[], int port, time_t lifetime)
 
 	// Trigger immediate handling
 	g_announces_announce = 0;
+
+	fprintf(fp, "Announcement started (port %d).\n", port);
 
 	return new;
 }
