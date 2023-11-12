@@ -98,46 +98,6 @@ static int cmd_peer(FILE *fp, const char addr_str[], int af)
 	return 0;
 }
 
-// separate a string into a list of arguments (int argc, char **argv)
-static int setargs(char **argv, int argv_size, char *args)
-{
-	int count = 0;
-
-	// skip spaces
-	while (isspace(*args)) {
-		++args;
-	}
-
-	while (*args) {
-		if ((count + 1) < argv_size) {
-			argv[count] = args;
-		} else {
-			log_error("CLI: too many arguments");
-			break;
-		}
-
-		// parse word
-		while (*args && !isspace(*args)) {
-			++args;
-		}
-
-		if (*args) {
-			*args++ = '\0';
-		}
-
-		// skip spaces
-		while (isspace(*args)) {
-			++args;
-		}
-
-		count++;
-	}
-
-	argv[MIN(count, argv_size - 1)] = NULL;
-
-	return count;
-}
-
 enum {
 	oHelp,
 	oPeer,

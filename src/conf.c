@@ -220,10 +220,8 @@ static bool conf_set(const char opt[], const char val[]);
 
 static bool conf_load_file(const char path[])
 {
-	char option[32];
-	char value[256];
 	char line[32 + 256];
-	char dummy[4];
+	char *argv[8];
 	struct stat s;
 
 	if (stat(path, &s) == 0 && !(s.st_mode & S_IFREG)) {
@@ -231,13 +229,13 @@ static bool conf_load_file(const char path[])
 		return false;
 	}
 
-	ssize_t nline = 0;
 	FILE *file = fopen(path, "r");
 	if (file == NULL) {
 		log_error("Cannot open file: %s (%s)", path, strerror(errno));
 		return false;
 	}
 
+	ssize_t nline = 0;
 	while (fgets(line, sizeof(line), file) != NULL) {
 		nline += 1;
 
@@ -251,18 +249,18 @@ static bool conf_load_file(const char path[])
 			continue;
 		}
 
-		int ret = sscanf(line, " %31s%*[ ]%255s %3s", option, value, dummy);
+		int argc = setargs(&argv[0], ARRAY_SIZE(argv), line);
 
-		if (ret == 1 || ret == 2) {
+		if (argc == 1 || argc == 2) {
 			// Prevent recursive inclusion
-			if (strcmp(option, "--config ") == 0) {
+			if (strcmp(argv[0], "--config") == 0) {
 				fclose(file);
 				log_error("Option '--config' not allowed inside a configuration file, line %ld.", nline);
 				return false;
 			}
 
 			// parse --option value / --option
-			if (!conf_set(option, (ret == 2) ? value : NULL)) {
+			if (!conf_set(argv[0], (argc == 2) ? argv[1] : NULL)) {
 				fclose(file);
 				return false;
 			}

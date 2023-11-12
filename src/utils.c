@@ -17,6 +17,46 @@
 #include "utils.h"
 
 
+// separate a string into a list of arguments (int argc, char **argv)
+int setargs(char **argv, int argv_size, char *args)
+{
+	int count = 0;
+
+	// skip spaces
+	while (isspace(*args)) {
+		++args;
+	}
+
+	while (*args) {
+		if ((count + 1) < argv_size) {
+			argv[count] = args;
+		} else {
+			log_error("CLI: too many arguments");
+			break;
+		}
+
+		// parse word
+		while (*args && !isspace(*args)) {
+			++args;
+		}
+
+		if (*args) {
+			*args++ = '\0';
+		}
+
+		// skip spaces
+		while (isspace(*args)) {
+			++args;
+		}
+
+		count++;
+	}
+
+	argv[MIN(count, argv_size - 1)] = NULL;
+
+	return count;
+}
+
 bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize)
 {
 	if (bytes_from_base32(id, idsize, query, querysize)) {
