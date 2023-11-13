@@ -1,8 +1,8 @@
 # DHTd
 
-Run a [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect to the BitTorrent network. Announce identifiers and query them from the command line.
+Run a [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect to the BitTorrent network. Announce identifiers and query them from the command line to get a list of IP addresses of the nodes that announce them.
 
-Supported are a command line interface and local peer discovery.
+DHTd can be used to find the IP address of other instances in a decentralized way. Please note that DHTd does not provide any authentication.
 
 ## Quick Start
 
