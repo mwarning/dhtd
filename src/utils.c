@@ -57,7 +57,7 @@ int setargs(char **argv, int argv_size, char *args)
 	return count;
 }
 
-bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize)
+bool parse_id(uint8_t id[], size_t idsize, const char query[], size_t querysize)
 {
 	if (bytes_from_base32(id, idsize, query, querysize)) {
 		return true;
@@ -70,10 +70,10 @@ bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querys
 	return false;
 }
 
-bool is_hex_id(const char query[])
+bool is_id(const char query[])
 {
 	uint8_t id[SHA1_BIN_LENGTH];
-	return parse_hex_id(id, sizeof(id), query, strlen(query));
+	return parse_id(id, sizeof(id), query, strlen(query));
 }
 
 // "<hex-id>[:<port>]"
@@ -94,7 +94,7 @@ bool parse_annoucement(uint8_t id[], int *port, const char query[], int default_
 		*port = default_port;
 	}
 
-	return parse_hex_id(id, SHA1_BIN_LENGTH, query, len);
+	return parse_id(id, SHA1_BIN_LENGTH, query, len);
 }
 
 // "<hex-id>[:<port>]"

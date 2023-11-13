@@ -36,7 +36,7 @@ const option_t *find_option(const option_t options[], const char name[]);
 int setargs(char **argv, int argv_size, char *args);
 
 bool is_hex_id(const char query[]);
-bool parse_hex_id(uint8_t id[], size_t idsize, const char query[], size_t querysize);
+bool parse_id(uint8_t id[], size_t idsize, const char query[], size_t querysize);
 
 // query is "<hex-id>[:<port>]"
 bool is_announcement(const char query[]);

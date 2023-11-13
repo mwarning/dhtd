@@ -165,7 +165,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 	// parse identifier
 	switch (option->code) {
 		case oSearch: case oResults: case oQuery: case oBlock: case oAnnounceStart: case oAnnounceStop:
-		if (!parse_hex_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
+		if (!parse_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
 			fprintf(fp, "Failed to parse identifier.\n");
 			return;
 		}
