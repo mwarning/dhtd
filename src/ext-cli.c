@@ -521,7 +521,6 @@ int cli_client(int argc, char *argv[])
 	return EXIT_SUCCESS;
 
 error:
-	printf("K\n");
 	if (sock > 0) {
 		close(sock);
 	}
