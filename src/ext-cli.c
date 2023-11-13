@@ -443,22 +443,29 @@ int cli_client(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	// Concatenate arguments
 	size_t pos = 0;
-	for (size_t i = 0; i < argc; i++) {
-		size_t len = strlen(argv[i]);
-		if ((pos + len + 1) >= sizeof(buffer)) {
-			fprintf(stderr, "Input too long!\n");
-			return EXIT_FAILURE;
+	if (!isatty(fileno(stdin))) {
+		while(-1 != (buffer[pos++] = getchar()));
+		pos--;
+		if (buffer[pos-1] != '\n') {
+			// Append newline if not present
+			buffer[pos++] = '\n';
 		}
-		memcpy(&buffer[pos], argv[i], len);
-		pos += len;
-		buffer[pos] = ' ';
-		pos += 1;
+	} else {
+		// Concatenate arguments
+		for (size_t i = 0; i < argc; i++) {
+			size_t len = strlen(argv[i]);
+			if ((pos + len + 1) >= sizeof(buffer)) {
+				fprintf(stderr, "Input too long!\n");
+				return EXIT_FAILURE;
+			}
+			memcpy(&buffer[pos], argv[i], len);
+			pos += len;
+			buffer[pos++] = ' ';
+		}
+		// Append newline
+		buffer[pos++] = '\n';
 	}
-
-	buffer[pos] = '\n';
-	pos += 1;
 
 	int sock = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if (sock < 0) {
