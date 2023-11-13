@@ -59,7 +59,7 @@ static const char* g_server_help =
 	"    Print the results of a search.\n"
 	"  query <id>\n"
 	"    Start search and print results.\n"
-	"  announce-start <id> <port>\n"
+	"  announce-start <id>[:<port>]\n"
 	"    Start to announce an id along with a network port.\n"
 	"  announce-stop <id>\n"
 	"    Stop the announcement.\n"
@@ -125,7 +125,7 @@ static const option_t g_options[] = {
 	{"results", 2, oResults},
 	{"query", 2, oQuery},
 	{"status", 1, oStatus},
-	{"announce-start", 3, oAnnounceStart},
+	{"announce-start", 2, oAnnounceStart},
 	{"announce-stop", 2, oAnnounceStop},
 	{"block", 2, oBlock},
 	{"blocklist", 1, oPrintBlocked},
@@ -164,7 +164,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 
 	// parse identifier
 	switch (option->code) {
-		case oSearch: case oResults: case oQuery: case oBlock: case oAnnounceStart: case oAnnounceStop:
+		case oSearch: case oResults: case oQuery: case oBlock: case oAnnounceStop:
 		if (!parse_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
 			fprintf(fp, "Failed to parse identifier.\n");
 			return;
@@ -205,12 +205,8 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 		kad_status(fp);
 		break;
 	case oAnnounceStart: {
-		int port = parse_int(argv[2], -1);
-		if (port == 0) {
-			// use own DHT port
-			port = gconf->dht_port;
-		}
-		if (port_valid(port)) {
+		int port;
+		if (parse_annoucement(&id[0], &port, argv[1], gconf->dht_port)) {
 			announces_add(fp, id, port, LONG_MAX);
 		} else {
 			fprintf(fp, "Invalid port: %s\n", argv[2]);
