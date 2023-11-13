@@ -329,13 +329,11 @@ static void cli_client_handler(int rc, int clientsock)
 
 static void cli_server_handler(int rc, int serversock)
 {
-	int clientsock;
-
 	if (rc <= 0) {
 		return;
 	}
 
-	clientsock = accept(serversock, NULL, NULL);
+	int clientsock = accept(serversock, NULL, NULL);
 	if (clientsock < 0) {
 		log_error("accept(): %s", strerror(errno));
 		return;
@@ -348,14 +346,13 @@ static void cli_server_handler(int rc, int serversock)
 static void cli_console_handler(int rc, int fd)
 {
 	char request[256];
-	char *ptr;
 
 	if (rc <= 0) {
 		return;
 	}
 
 	// Read line
-	ptr = fgets(request, sizeof(request), stdin);
+	char *ptr = fgets(request, sizeof(request), stdin);
 	if (ptr == NULL) {
 		return;
 	}
@@ -393,12 +390,11 @@ void cli_free(void)
 static int select_read(int sockfd, char buffer[], int bufsize, struct timeval *tv)
 {
 	fd_set rfds;
-	int retval;
 
 	FD_ZERO(&rfds);
 	FD_SET(sockfd, &rfds);
 
-	retval = select(sockfd + 1, &rfds, NULL, NULL, tv);
+	int retval = select(sockfd + 1, &rfds, NULL, NULL, tv);
 
 	if (retval == -1) {
 		// Error
@@ -442,7 +438,7 @@ int cli_client(int argc, char *argv[])
 		}
 	}
 
-	if (strlen(path) > FIELD_SIZEOF(struct sockaddr_un, sun_path) - 1) {
+	if (strlen(path) >= FIELD_SIZEOF(struct sockaddr_un, sun_path)) {
 		fprintf(stderr, "Path too long!\n");
 		return EXIT_FAILURE;
 	}
