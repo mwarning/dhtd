@@ -92,7 +92,7 @@ static void join_mcast(const struct lpd_state* lpd, struct ifaddrs *ifa)
 
 				// ignore error (we might already be subscribed)
 				if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) < 0) {
-					log_error("failed to join IPv4 multicast group: %s", strerror(errno));
+					log_error("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
 				}
 			} else {
 				struct ipv6_mreq mreq6 = {0};
@@ -102,7 +102,7 @@ static void join_mcast(const struct lpd_state* lpd, struct ifaddrs *ifa)
 
 				// ignore error (we might already be subscribed)
 				if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) < 0) {
-					log_error("failed to join IPv6 multicast group: %s", strerror(errno));
+					log_error("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
 				}
 			}
 		}
@@ -121,23 +121,24 @@ static void send_mcasts(const struct lpd_state* lpd, struct ifaddrs *ifa)
 			struct in_addr addr = ((struct sockaddr_in*) ifa->ifa_addr)->sin_addr;
 
 			if (setsockopt(lpd->sock_send, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) < 0) {
-				log_error("setsockopt(IP_MULTICAST_IF) %s", strerror(errno));
+				log_error("setsockopt(IP_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
 				continue;
 			}
 		} else if (family == AF_INET6 && is_valid_ifa(ifa, AF_PACKET)) {
 			unsigned ifindex = if_nametoindex(ifa->ifa_name);
 
 			if (setsockopt(lpd->sock_send, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) < 0) {
-				log_error("setsockopt(IPV6_MULTICAST_IF) %s", strerror(errno));
+				log_error("setsockopt(IPV6_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
 				continue;
 			}
 		} else {
 			continue;
 		}
 
-		log_debug("LPD: Send discovery message to %s", str_addr(&lpd->mcast_addr));
 		sendto(lpd->sock_send, (void const*) message, strlen(message), 0,
 				(struct sockaddr const*) &lpd->mcast_addr, addr_len(&lpd->mcast_addr));
+
+		log_debug("LPD: Send discovery message to %s on %s", str_addr(&lpd->mcast_addr), ifa->ifa_name);
 	}
 }
 
