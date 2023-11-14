@@ -302,12 +302,12 @@ static bool conf_set(const char opt[], const char val[])
 	}
 
 	if (option->num_args == 1 && val == NULL) {
-		log_error("Argument expected for option: %s", opt);
+		log_error("Argument expected for %s", opt);
 		return false;
 	}
 
 	if (option->num_args == 0 && val != NULL) {
-		log_error("No argument expected for option: %s", opt);
+		log_error("No argument expected for %s", opt);
 		return false;
 	}
 
@@ -315,11 +315,11 @@ static bool conf_set(const char opt[], const char val[])
 	{
 	case oAnnounce:
 		if (!is_announcement(val)) {
-			log_error("Invalid announce hash: %s", opt);
+			log_error("Invalid announcement: %s", opt);
 			return false;
 		}
 		if (!array_append(&g_announce_args[0], ARRAY_SIZE(g_announce_args), val)) {
-			log_error("Too many announce entries");
+			log_error("Too many announcements");
 			return false;
 		}
 		break;
