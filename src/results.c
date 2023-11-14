@@ -18,8 +18,6 @@
 * Therefore, results are collected and stored here.
 */
 
-#define MAX_RESULTS_PER_SEARCH 100
-
 struct result_t {
 	uint8_t ip[16];
 	uint8_t length;

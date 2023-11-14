@@ -476,4 +476,6 @@ void kad_print_constants(FILE *fp)
 
 	// Maximum number of blocked nodes
 	fprintf(fp, "DHT_MAX_BLACKLISTED: %d\n", DHT_MAX_BLACKLISTED);
+
+	fprintf(fp, "MAX_RESULTS_PER_SEARCH: %d\n", MAX_RESULTS_PER_SEARCH);
 }
