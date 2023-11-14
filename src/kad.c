@@ -54,12 +54,11 @@ void dht_handler(int rc, int sock)
 	uint8_t buf[1500];
 	uint32_t buflen;
 	IP from;
-	socklen_t fromlen;
 	time_t time_wait = 0;
 
 	if (rc > 0) {
 		// Check which socket received the data
-		fromlen = sizeof(from);
+		socklen_t fromlen = sizeof(from);
 		buflen = recvfrom(sock, buf, sizeof(buf) - 1, 0, (struct sockaddr*) &from, &fromlen);
 
 		if (buflen <= 0 || buflen >= sizeof(buf)) {
@@ -74,6 +73,7 @@ void dht_handler(int rc, int sock)
 
 	if (buflen > 0) {
 		// Handle incoming data
+		socklen_t fromlen = sizeof(from);
 		rc = dht_periodic(buf, buflen, (struct sockaddr*) &from, fromlen, &time_wait, dht_callback_func, NULL);
 
 		if (rc < 0 && errno != EINTR) {
