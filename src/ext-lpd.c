@@ -61,20 +61,20 @@ struct lpd_state g_lpd6 = {
 	.sock_listen = -1
 };
 
-static int is_valid_ifa(struct ifaddrs *ifa, int af)
+static bool is_valid_ifa(struct ifaddrs *ifa, int af)
 {
 	if ((ifa->ifa_addr == NULL)
 			|| !(ifa->ifa_flags & IFF_RUNNING)
 			|| (ifa->ifa_flags & IFF_LOOPBACK)
 			|| (ifa->ifa_addr->sa_family != af)) {
-		return 0;
+		return false;
 	}
 
 	// if DHT interface set, use only that interface (if it exists)
-	if (gconf->dht_ifname && 0 != strcmp(gconf->dht_ifname, ifa->ifa_name)) {
-		return 0;
+	if (gconf->dht_ifname) {
+		return (0 == strcmp(gconf->dht_ifname, ifa->ifa_name));
 	} else {
-		return 1;
+		return true;
 	}
 }
 
@@ -85,22 +85,25 @@ static void join_mcast(const struct lpd_state* lpd, struct ifaddrs *ifa)
 			unsigned ifindex = if_nametoindex(ifa->ifa_name);
 
 			if (lpd->mcast_addr.ss_family == AF_INET) {
-				struct ip_mreq mcastReq;
+				struct ip_mreq mcastReq = {0};
 
-				memset(&mcastReq, 0, sizeof(mcastReq));
 				mcastReq.imr_multiaddr = ((IP4*) &lpd->mcast_addr)->sin_addr;
 				mcastReq.imr_interface.s_addr = htonl(INADDR_ANY);
 
 				// ignore error (we might already be subscribed)
-				setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq));
+				if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) < 0) {
+					log_error("failed to join IPv4 multicast group: %s", strerror(errno));
+				}
 			} else {
-				struct ipv6_mreq mreq6;
+				struct ipv6_mreq mreq6 = {0};
 
 				memcpy(&mreq6.ipv6mr_multiaddr, &((IP6*) &lpd->mcast_addr)->sin6_addr, 16);
 				mreq6.ipv6mr_interface = ifindex;
 
 				// ignore error (we might already be subscribed)
-				setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6));
+				if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) < 0) {
+					log_error("failed to join IPv6 multicast group: %s", strerror(errno));
+				}
 			}
 		}
 	}
@@ -110,7 +113,6 @@ static void send_mcasts(const struct lpd_state* lpd, struct ifaddrs *ifa)
 {
 	char message[16];
 
-	log_debug("LPD: Send discovery message to %s", str_addr(&lpd->mcast_addr));
 	sprintf(message, "DHT %d", gconf->dht_port);
 
 	int family = lpd->mcast_addr.ss_family;
@@ -132,20 +134,17 @@ static void send_mcasts(const struct lpd_state* lpd, struct ifaddrs *ifa)
 		} else {
 			continue;
 		}
+
+		log_debug("LPD: Send discovery message to %s", str_addr(&lpd->mcast_addr));
 		sendto(lpd->sock_send, (void const*) message, strlen(message), 0,
 				(struct sockaddr const*) &lpd->mcast_addr, addr_len(&lpd->mcast_addr));
 	}
 }
 
-static void handle_mcast(int rc, struct lpd_state* lpd)
+static void handle_mcast(int mcast_rc, struct lpd_state* lpd)
 {
-	struct ifaddrs *ifaddrs;
-	socklen_t addrlen;
-	char buf[16];
-	uint16_t port;
-	IP addr;
-
 	if (lpd->mcast_time <= time_now_sec()) {
+		struct ifaddrs *ifaddrs;
 		if (getifaddrs(&ifaddrs) == 0) {
 			// join multicast group (in case of new interfaces)
 			join_mcast(lpd, ifaddrs);
@@ -166,13 +165,15 @@ static void handle_mcast(int rc, struct lpd_state* lpd)
 		lpd->mcast_time = time_add_mins(5);
 	}
 
-	if (rc <= 0) {
+	if (mcast_rc <= 0) {
 		return;
 	}
 
 	// Receive multicast ping
-	addrlen = sizeof(IP);
-	rc = recvfrom(lpd->sock_listen, buf, sizeof(buf) - 1, 0, (struct sockaddr*) &addr, (socklen_t*) &addrlen);
+	socklen_t addrlen = sizeof(IP);
+	IP address = {0};
+	char buf[16];
+	int rc = recvfrom(lpd->sock_listen, buf, sizeof(buf) - 1, 0, (struct sockaddr*) &address, (socklen_t*) &addrlen);
 	if (rc <= 0) {
 		log_warning("LPD: Cannot receive multicast message: %s", strerror(errno));
 		return;
@@ -185,10 +186,13 @@ static void handle_mcast(int rc, struct lpd_state* lpd)
 
 	buf[rc] = '\0';
 
-	if (sscanf(buf, "DHT %hu", &port) == 1) {
-		port_set(&addr, port);
-		log_debug("LPD: Ping lonely peer at %s", str_addr(&addr));
-		kad_ping(&addr);
+	if (0 == strncmp(buf, "DHT ", 4)) {
+		int port = parse_int(&buf[4], -1);
+		if (port_valid(port)) {
+			port_set(&address, port);
+			log_debug("LPD: Ping lonely peer at %s", str_addr(&address));
+			kad_ping(&address);
+		}
 	}
 }
 
@@ -208,14 +212,15 @@ static int create_send_socket(int af)
 {
 	const int scope = TTL_SAME_SUBNET;
 	const int opt_off = 0;
-	in_addr_t iface = INADDR_ANY;
-	int sock;
 
-	if ((sock = net_socket("LPD", NULL, IPPROTO_IP, af)) < 0) {
+	int sock = net_socket("LPD", NULL, IPPROTO_IP, af);
+	if (sock < 0) {
 		return -1;
 	}
 
 	if (af == AF_INET) {
+		in_addr_t iface = INADDR_ANY;
+
 		// IPv4
 		if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void const*)&scope, sizeof(scope)) != 0) {
 			goto fail;
@@ -252,14 +257,13 @@ fail:
 static int create_receive_socket(const IP *mcast_addr)
 {
 	const int opt_off = 0;
-	socklen_t addrlen;
-	int sock;
-	int af;
+	const int opt_on = 1;
 
-	addrlen = addr_len(mcast_addr);
-	af = mcast_addr->ss_family;
+	socklen_t addrlen = addr_len(mcast_addr);
+	int af = mcast_addr->ss_family;
 
-	if ((sock = net_socket("LPD", NULL, IPPROTO_UDP, af)) < 0) {
+	int sock = net_socket("LPD", NULL, IPPROTO_UDP, af);
+	if (sock < 0) {
 		return -1;
 	}
 
@@ -274,6 +278,10 @@ static int create_receive_socket(const IP *mcast_addr)
 		if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, (void const*)&opt_off, sizeof(opt_off)) != 0) {
 			goto fail;
 		}
+	}
+
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void const*)&opt_on, sizeof(opt_on)) != 0) {
+		goto fail;
 	}
 
 	if (bind(sock, (struct sockaddr*)mcast_addr, addrlen) != 0) {
@@ -293,14 +301,13 @@ fail:
 
 bool lpd_setup(void)
 {
-	const char *ifname;
 	bool ready = false;
 
 	if (gconf->lpd_disable) {
 		return true;
 	}
 
-	ifname = gconf->dht_ifname;
+	const char *ifname = gconf->dht_ifname;
 
 	if (ifname && (gconf->af == AF_UNSPEC || gconf->af == AF_INET)) {
 		log_warning("LPD: ifname setting not supported for IPv4");
