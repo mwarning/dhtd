@@ -444,7 +444,7 @@ bool id_equal(const uint8_t id1[], const uint8_t id2[])
 
 const char *str_id(const uint8_t id[])
 {
-	static char hexbuf[SHA1_HEX_LENGTH + 1];
+	static char hexbuf[2 * SHA1_BIN_LENGTH + 1];
 	return bytes_to_base16(hexbuf, sizeof(hexbuf), id, SHA1_BIN_LENGTH);
 }
 
