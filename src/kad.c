@@ -289,7 +289,7 @@ void kad_status(FILE *fp)
 		fp,
 		"%s\n"
 		"DHT id: %s\n"
-		"DHT listen on: %s / %s\n"
+		"DHT listen on: %s / device: %s / port: %d\n"
 		"DHT nodes: %d IPv4 (%d good), %d IPv6 (%d good)\n"
 		"DHT storage: %d entries with %d addresses\n"
 		"DHT searches: %d IPv4 (%d done), %d IPv6 active (%d done)\n"
@@ -297,7 +297,7 @@ void kad_status(FILE *fp)
 		"DHT blocklist: %d\n",
 		dhtd_version_str,
 		str_id(myid),
-		str_af(gconf->af), gconf->dht_ifname ? gconf->dht_ifname : "<any>",
+		str_af(gconf->af), gconf->dht_ifname ? gconf->dht_ifname : "<any>", gconf->dht_port,
 		nodes4, nodes4_good, nodes6, nodes6_good,
 		numstorage, numstorage_peers,
 		numsearches4_active, numsearches4_done, numsearches6_active, numsearches6_done,
