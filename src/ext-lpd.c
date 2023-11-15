@@ -61,12 +61,11 @@ struct lpd_state g_lpd6 = {
 	.sock_listen = -1
 };
 
-static bool is_valid_ifa(struct ifaddrs *ifa, int af)
+static bool filter_ifa(const struct ifaddrs *ifa)
 {
 	if ((ifa->ifa_addr == NULL)
 			|| !(ifa->ifa_flags & IFF_RUNNING)
-			|| (ifa->ifa_flags & IFF_LOOPBACK)
-			|| (ifa->ifa_addr->sa_family != af)) {
+			|| (ifa->ifa_flags & IFF_LOOPBACK)) {
 		return false;
 	}
 
@@ -78,61 +77,86 @@ static bool is_valid_ifa(struct ifaddrs *ifa, int af)
 	}
 }
 
-static void join_mcast(const struct lpd_state* lpd, struct ifaddrs *ifa)
+static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
 {
-	for (; ifa != NULL; ifa = ifa->ifa_next) {
-		if (is_valid_ifa(ifa, AF_PACKET)) {
-			unsigned ifindex = if_nametoindex(ifa->ifa_name);
+	const char *prev_ifname = NULL;
+	int family = lpd->mcast_addr.ss_family;
 
-			if (lpd->mcast_addr.ss_family == AF_INET) {
-				struct ip_mreq mcastReq = {0};
+	for (const struct ifaddrs *ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+		int ifa_family = ifa->ifa_addr->sa_family;
 
-				mcastReq.imr_multiaddr = ((IP4*) &lpd->mcast_addr)->sin_addr;
-				mcastReq.imr_interface.s_addr = htonl(INADDR_ANY);
+		if (!filter_ifa(ifa) || family != ifa_family) {
+			continue;
+		}
 
-				// ignore error (we might already be subscribed)
-				if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) < 0) {
-					log_error("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
-				}
+		if (ifa_family == AF_INET) {
+			struct ip_mreq mcastReq = {0};
+
+			mcastReq.imr_multiaddr = ((IP4*) &lpd->mcast_addr)->sin_addr;
+			mcastReq.imr_interface.s_addr = htonl(INADDR_ANY);
+
+			// ignore error (we might already be subscribed)
+			if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) < 0) {
+				log_error("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
+			}
+		} else { // AF_INET6
+			// skip previous interface (relies on order of ifas)
+			if (prev_ifname && 0 == strcmp(prev_ifname, ifa->ifa_name)) {
+				continue;
 			} else {
-				struct ipv6_mreq mreq6 = {0};
+				prev_ifname = ifa->ifa_name;
+			}
 
-				memcpy(&mreq6.ipv6mr_multiaddr, &((IP6*) &lpd->mcast_addr)->sin6_addr, 16);
-				mreq6.ipv6mr_interface = ifindex;
+			unsigned ifindex = if_nametoindex(ifa->ifa_name);
+			struct ipv6_mreq mreq6 = {0};
 
-				// ignore error (we might already be subscribed)
-				if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) < 0) {
-					log_error("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
-				}
+			memcpy(&mreq6.ipv6mr_multiaddr, &((IP6*) &lpd->mcast_addr)->sin6_addr, 16);
+			mreq6.ipv6mr_interface = ifindex;
+
+			// ignore error (we might already be subscribed)
+			if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) < 0) {
+				log_error("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
 			}
 		}
 	}
 }
 
-static void send_mcasts(const struct lpd_state* lpd, struct ifaddrs *ifa)
+static void send_mcasts(const struct lpd_state* lpd, const struct ifaddrs *ifas)
 {
 	char message[16];
 
 	sprintf(message, "DHT %d", gconf->dht_port);
 
 	int family = lpd->mcast_addr.ss_family;
-	for (; ifa != NULL; ifa = ifa->ifa_next) {
-		if (family == AF_INET && is_valid_ifa(ifa, AF_INET)) {
+	const char *prev_ifname = NULL;
+
+	for (const struct ifaddrs *ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+		int ifa_family = ifa->ifa_addr->sa_family;
+
+		if (!filter_ifa(ifa) || family != ifa_family) {
+			continue;
+		}
+
+		if (ifa_family == AF_INET) {
 			struct in_addr addr = ((struct sockaddr_in*) ifa->ifa_addr)->sin_addr;
 
 			if (setsockopt(lpd->sock_send, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) < 0) {
 				log_error("setsockopt(IP_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
 				continue;
 			}
-		} else if (family == AF_INET6 && is_valid_ifa(ifa, AF_PACKET)) {
-			unsigned ifindex = if_nametoindex(ifa->ifa_name);
+		} else { // AF_INET6
+			// skip previous interface (relies on order of ifas)
+			if (prev_ifname && 0 == strcmp(prev_ifname, ifa->ifa_name)) {
+				continue;
+			} else {
+				prev_ifname = ifa->ifa_name;
+			}
 
+			unsigned ifindex = if_nametoindex(ifa->ifa_name);
 			if (setsockopt(lpd->sock_send, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) < 0) {
 				log_error("setsockopt(IPV6_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
 				continue;
 			}
-		} else {
-			continue;
 		}
 
 		sendto(lpd->sock_send, (void const*) message, strlen(message), 0,
@@ -144,6 +168,7 @@ static void send_mcasts(const struct lpd_state* lpd, struct ifaddrs *ifa)
 
 static void handle_mcast(int mcast_rc, struct lpd_state* lpd)
 {
+	// called at least every second
 	if (lpd->mcast_time <= time_now_sec()) {
 		struct ifaddrs *ifaddrs;
 		if (getifaddrs(&ifaddrs) == 0) {
