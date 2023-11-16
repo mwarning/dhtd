@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 
 #define PROGRAM_NAME "DHTd"
-#define PROGRAM_VERSION "0.2.0"
+#define PROGRAM_VERSION "0.2.1"
 
 #define SHA1_BIN_LENGTH 20
 
