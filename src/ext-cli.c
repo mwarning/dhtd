@@ -38,7 +38,7 @@ static const char* g_server_usage =
 	"  query\n"
 	"  search <id>\n"
 	"  results <id>\n"
-	"  announce-start <id> <port>\n"
+	"  announce-start <id>[:<port>]\n"
 	"  announce-stop <id>\n"
 	"  searches\n"
 	"  announcements\n"
@@ -66,7 +66,7 @@ static const char* g_server_help =
 	"  searches\n"
 	"    Print a list of all searches. They expire after 20min.\n"
 	"  announcements\n"
-	"    Print a list of all announcements."
+	"    Print a list of all announcements.\n"
 	"  peer <address>:<port>\n"
 	"    Add a peer by address.\n"
 	"  block <address>\n"
@@ -74,9 +74,9 @@ static const char* g_server_help =
 	"  constants|blocklist|peers|buckets|storage\n"
 	"    Print various internal data.\n"
 	" -----\n"
-	"  id: 20 bytes as base16 (hexadecimal) or base32 string\n"
-	"  port: Network number between 1-65536\n"
-	"  address: IPv4 or IPv6 address\n"
+	"  <id>: 20 bytes as base16 (hexadecimal) or base32 string\n"
+	"  <port>: Network port number between 1-65536\n"
+	"  <address>: IPv4 or IPv6 address\n"
 	"";
 
 static int g_cli_sock = -1;
