@@ -117,6 +117,37 @@ Note:
 * `--version`, `-v`  
   Print program version.
 
+## Command Line Interface
+
+List of commands that can be send to a running `dhtd` instance via the command line control interface `dhtd-ctl`.
+
+* `status`  
+  The current state of this node.
+* `search <id>`  
+  Start a search for announced values.
+* `results <id>`  
+  Print the results of a search.
+* `query <id>`  
+  Start search and print results.
+* `announce-start <id>[:<port>]`  
+  Start to announce an id along with a network port.
+* `announce-stop <id>`  
+  Stop the announcement.
+* `searches`  
+  Print a list of all searches. They expire after 20min.
+* `announcements`  
+  Print a list of all announcements.
+* `peer <address>:<port>`  
+  Add a peer by address.
+* `block <address>`  
+  Block a certain IP address for some time.
+* `constants|blocklist|peers|buckets|storage`  
+  Print various internal data.
+
+`<id>`: 20 bytes as base16 (hexadecimal) or base32 string
+`<port>`: Network port number between 1-65536
+`<address>`: IPv4 or IPv6 address
+
 ## License
 
 MIT/X11
