@@ -13,8 +13,8 @@ else
   OBJS += build/unix.o
 endif
 
-.PHONY: all clean strip install dhtd \
-	arch-pkg deb-pkg osx-pkg manpage install uninstall
+.PHONY: all clean strip install \
+		dhtd install uninstall
 
 all: dhtd
 
@@ -41,10 +41,6 @@ dhtd: build/main.o $(OBJS) $(EXTRA)
 
 clean:
 	rm -rf build/*
-
-manpage:
-	ronn --roff --manual=DHTd\ Manual --organization=mwarning --date=2023-01-01 misc/manpage.md
-	mv misc/manpage.1 misc/manpage
 
 install:
 	cp build/dhtd $(DESTDIR)/usr/bin/ 2> /dev/null || true
