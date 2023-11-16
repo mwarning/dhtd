@@ -147,8 +147,12 @@ List of commands that can be send to a running `dhtd` instance via the command l
 * `constants|blocklist|peers|buckets|storage`  
   Print various internal data.
 
+Legend:
+
 `<id>`: 20 bytes as base16 (hexadecimal) or base32 string
+
 `<port>`: Network port number between 1-65536
+
 `<address>`: IPv4 or IPv6 address
 
 ## License
