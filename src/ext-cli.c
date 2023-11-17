@@ -209,7 +209,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 		if (parse_annoucement(&id[0], &port, argv[1], gconf->dht_port)) {
 			announces_add(fp, id, port, LONG_MAX);
 		} else {
-			fprintf(fp, "Invalid port: %s\n", argv[2]);
+			fprintf(fp, "Invalid announcement.\n");
 		}
 		break;
 	}
