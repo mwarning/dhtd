@@ -43,7 +43,7 @@ static const char *dhtd_usage_str =
 "\n"
 "Usage: dhtd [OPTIONS]\n"
 "\n"
-" --announce <name>:<port>		Announce a hash and port.\n"
+" --announce <id>[:<port>}		Announce a id and optional port.\n"
 "					This option may occur multiple times.\n\n"
 " --peerfile <file>			Import/Export peers from and to a file.\n\n"
 " --peer <address>			Add a static peer address.\n"
