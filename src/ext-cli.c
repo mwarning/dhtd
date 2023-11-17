@@ -441,9 +441,15 @@ int cli_client(int argc, char *argv[])
 
 	size_t pos = 0;
 	if (!isatty(fileno(stdin))) {
-		while(-1 != (buffer[pos++] = getchar()));
-		pos--;
-		if (buffer[pos-1] != '\n') {
+		while (pos < sizeof(buffer)) {
+			int c = getchar();
+			if (c == -1) {
+				break;
+			}
+			buffer[pos++] = c;
+		}
+
+		if (pos == 0 || buffer[pos-1] != '\n') {
 			// Append newline if not present
 			buffer[pos++] = '\n';
 		}
