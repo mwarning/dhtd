@@ -34,9 +34,9 @@ Example output after a few minutes:
 
 ```
 $ dhtd-ctl status
-DHTd v1.0.0 ( cli debug lpd )
+DHTd 0.2.1 ( cli debug lpd )
 DHT id: 9e918df4c10a3d2127d86311b20195447e70376b
-DHT listen on: IPv4+IPv6 / <any>
+DHT listen on: IPv4+IPv6 / device: <any> / port: 6881
 DHT nodes: 376 IPv4 (310 good), 344 IPv6 (239 good)
 DHT storage: 43 entries with 145 addresses
 DHT searches: 0 IPv4 (0 done), 0 IPv6 active (0 done),
@@ -70,6 +70,7 @@ $ dhtd-ctl results 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
 
 Note:
  - Searches/Results are discarded after about 62 minutes.
+ - You cannot search for the id of the node itself, only ids that someone announced.
  - Use `query` to start/continue a search and also print out results.
  - Use `--execute <file>` command line argument to execute a script for each result.
 
@@ -77,8 +78,8 @@ Note:
 
 Startup command line arguments for `dhtd`.
 
-* `--announce` *hash*:*port*  
-  Announce a hash and port.  
+* `--announce` *id*[:*port*]  
+  Announce a id and optional port.  
   This option may occur multiple times.
 * `--peerfile` *file*  
   Import/Export peers from and to a file.
@@ -137,7 +138,7 @@ List of commands that can be send to a running `dhtd` instance via the command l
 * `announce-stop <id>`  
   Stop the announcement.
 * `searches`  
-  Print a list of all searches. They expire after 20min.
+  Print a list of all searches. They expire after 62min.
 * `announcements`  
   Print a list of all announcements.
 * `peer <address>:<port>`  
