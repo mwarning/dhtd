@@ -47,9 +47,9 @@ static const char* g_server_usage =
 	"  constants|blocklist|peers|buckets|storage\n";
 
 static const char* g_server_help = 
-	"  DHTd allows to search for peers that have announced a identifier.\n"
-	"  The result is a list of IP addresses and ports of those peers that\n"
-	"  have announcement it. DHTd also allows to perform announcements.\n"
+	"  DHTd is a standalone DHT node for the mainline BitTorrent network.\n"
+	"  Announce and search for peers that have announced an identifier.\n"
+	"  The result is a list of IP addresses and ports of those peers.\n"
 	"\n"
 	"  status\n"
 	"    The current state of this node.\n"
