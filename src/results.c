@@ -27,7 +27,8 @@ struct result_t {
 
 struct search_t {
 	uint8_t id[SHA1_BIN_LENGTH];
-	uint16_t numresults;
+	uint16_t numresults4;
+	uint16_t numresults6;
 	uint16_t maxresults;
 	struct result_t *results;
 	struct search_t *next;
@@ -94,7 +95,7 @@ struct dht_addr6_t {
 
 static void result_add(struct search_t *search, const uint8_t id[], const uint8_t *ip, uint8_t length, uint16_t port)
 {
-	if (search->numresults >= search->maxresults) {
+	if ((search->numresults4 + search->numresults6) >= search->maxresults) {
 		// skip result
 		return;
 	}
@@ -110,7 +111,11 @@ static void result_add(struct search_t *search, const uint8_t id[], const uint8_
 		result->next = search->results;
 		search->results = result;
 
-		search->numresults += 1;
+		if (length == 4) {
+			search->numresults4 += 1;
+		} else {
+			search->numresults6 += 1;
+		}
 
 		on_new_search_result(id, ip, length, port);
 	}
@@ -146,10 +151,15 @@ void results_add(const uint8_t id[], int af, const void *data, size_t data_len)
 	}
 }
 
-unsigned results_count(const uint8_t id[])
+unsigned results_count(const uint8_t id[], int af)
 {
 	struct search_t *search = find_search(id);
-	return search ? search->numresults : 0;
+	if (search) switch (af) {
+		case AF_INET: return search->numresults4;
+		case AF_INET6: return search->numresults6;
+		default: return search->numresults4 + search->numresults6;
+	}
+	return 0;
 }
 
 void results_print(FILE *fp, const uint8_t id[])

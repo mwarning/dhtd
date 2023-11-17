@@ -414,7 +414,7 @@ void kad_print_searches(FILE *fp)
 			(unsigned) s->port,
 			s->done ? "true" : "false"
 		);
-		fprintf(fp, "  results: %u\n", (unsigned) results_count(s->id));
+		fprintf(fp, "  results: %u\n", (unsigned) results_count(s->id, s->af));
 		/*
 		if (do_print_nodes) {
 			for (j = 0; j < s->numnodes; ++j) {
