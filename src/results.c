@@ -95,11 +95,6 @@ struct dht_addr6_t {
 
 static void result_add(struct search_t *search, const uint8_t id[], const uint8_t *ip, uint8_t length, uint16_t port)
 {
-	if ((search->numresults4 + search->numresults6) >= search->maxresults) {
-		// skip result
-		return;
-	}
-
 	struct result_t *result = find_result(search, ip, length, port);
 	if (!result) {
 		// add new result
@@ -134,17 +129,24 @@ void results_add(const uint8_t id[], int af, const void *data, size_t data_len)
 		g_searches = search;
 	}
 
+	// current results
+	int numresults = search->numresults4 + search->numresults6;
+
 	switch (af) {
 		case AF_INET: {
+			int got = (data_len / sizeof(struct dht_addr4_t));
+			int add = MIN(got, search->maxresults - numresults);
 			struct dht_addr4_t *data4 = (struct dht_addr4_t *) data;
-			for (size_t i = 0; i < (data_len / sizeof(struct dht_addr4_t)); ++i) {
+			for (size_t i = 0; i < add; ++i) {
 				result_add(search, id, &data4[i].addr[0], 4, (uint16_t) data4[i].port);
 			}
 			break;
 		}
 		case AF_INET6: {
+			int got = (data_len / sizeof(struct dht_addr6_t));
+			int add = MIN(got, search->maxresults - numresults);
 			struct dht_addr6_t *data6 = (struct dht_addr6_t *) data;
-			for (size_t i = 0; i < (data_len / sizeof(struct dht_addr6_t)); ++i) {
+			for (size_t i = 0; i < add; ++i) {
 				result_add(search, id, &data6[i].addr[0], 16, (uint16_t) data6[i].port);
 			}
 		}
