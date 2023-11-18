@@ -4,7 +4,12 @@ A standalone [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute 
 
 A Distributed Hash Table (DHT) is a distributed system storing key/value pairs used by BitTorrent clients to find peers. DHTd can be used in the same way to find the IP address of other instances in a decentralized way. Please note that DHTd does not provide any authentication.
 
-DHTd is especially small at 80KB (compiled with `-Os`).
+Features:
+
+* small at 80KB (compiled with `-Os`)
+* announce and search for hashes
+* run as bootstrap node
+* scripting capabilities
 
 ## Quick Start
 
