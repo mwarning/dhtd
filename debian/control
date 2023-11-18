@@ -1,0 +1,16 @@
+Source: dhtd
+Section: net
+Priority: optional
+Maintainer: Moritz Warning <moritzwarning@web.de>
+Standards-Version: 4.6.2
+Build-Depends: debhelper (>=13)
+Homepage: https://github.com/mwarning/dhtd
+
+Package: dhtd
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: standalone mainline DHT daemon
+ Standalone Distributed Hash Table (DHT) daemon. Take part in the
+ the network created by mainline BitTorrent clients and announce
+ identifiers. Query identifiers to get a list of IP addresses and
+ ports.

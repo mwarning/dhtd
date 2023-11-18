@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+export FEATURES="cli lpd"
+
+# https://wiki.debian.org/Multiarch/Implementation#dh.281.29_and_autotools
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+# Top directory of the source code
+SRCTOP := $(shell if [ "$$PWD" != "" ]; then echo $$PWD; else pwd; fi)
+
+# Destination directory where files will be installed
+DESTDIR = $(SRCTOP)/debian/dhtd
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -s build/dhtd $(DESTDIR)/usr/bin/
+	ln -s dhtd $(DESTDIR)/usr/bin/dhtd-ctl
+	install -d $(DESTDIR)/etc/dhtd
+	echo "--peer bttracker.debian.org:6881\n--peer router.bittorrent.com:6881\n--peerfile /etc/dhtd/peers.txt" > $(DESTDIR)/etc/dhtd/dhtd.conf
+	touch $(DESTDIR)/etc/dhtd/peers.txt

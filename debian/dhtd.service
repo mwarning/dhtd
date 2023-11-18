@@ -1,0 +1,13 @@
+[Unit]
+Description=Mainline BitTorrent DHT daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/dhtd --daemon --pidfile /var/run/dhtd.pid --cli-disable-stdin --peerfile /etc/dhtd/peers.txt --config /etc/dhtd/dhtd.conf
+KillMode=mixed
+Restart=on-failure
+PIDFile=/var/run/dhtd.pid
+Type=forking
+
+[Install]
+WantedBy=multi-user.target

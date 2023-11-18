@@ -1,0 +1,7 @@
+dhtd (0.2.2-1) stable; urgency=medium
+
+  * fix wrong error message for announcements using dhtd-ctl
+  * show search result count per IP version
+  * improved help texts
+
+ -- Moritz Warning <moritzwarning@web.de>  Mon, 13 Nov 2023 00:00:00 +0100
