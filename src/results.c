@@ -164,7 +164,7 @@ unsigned results_count(const uint8_t id[], int af)
 	return 0;
 }
 
-void results_print(FILE *fp, const uint8_t id[])
+bool results_print(FILE *fp, const uint8_t id[])
 {
 	struct search_t *search = find_search(id);
 
@@ -174,7 +174,10 @@ void results_print(FILE *fp, const uint8_t id[])
 			fprintf(fp, "%s\n", str_addr2(&result->ip[0], result->length, result->port));
 			result = result->next;
 		}
+		return true;
 	}
+
+	return false;
 }
 
 // Free a search_t struct
