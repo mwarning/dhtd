@@ -1,6 +1,6 @@
 
-CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99 -I/usr/local/include
-LDFLAGS += -L/usr/local/lib -lc
+CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99
+LDFLAGS += -lc
 FEATURES ?= cli lpd debug
 
 OBJS = build/kad.o build/log.o build/results.o \
