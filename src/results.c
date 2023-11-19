@@ -29,7 +29,7 @@ struct search_t {
 	uint8_t id[SHA1_BIN_LENGTH];
 	uint16_t numresults4;
 	uint16_t numresults6;
-	uint16_t maxresults;
+	uint16_t maxresults; // IPv4 + IPv6
 	struct result_t *results;
 	struct search_t *next;
 };
@@ -40,9 +40,7 @@ static struct search_t *g_searches = NULL;
 
 static struct search_t *find_search(const uint8_t id[])
 {
-	struct search_t *search;
-
-	search = g_searches;
+	struct search_t *search = g_searches;
 	while (search) {
 		if (memcmp(&search->id, id, SHA1_BIN_LENGTH) == 0) {
 			return search;
