@@ -424,10 +424,9 @@ bool conf_load(void)
 
 static struct gconf_t *conf_alloc()
 {
-	struct gconf_t *conf;
 	time_t now = time(NULL);
 
-	conf = (struct gconf_t*) calloc(1, sizeof(struct gconf_t));
+	struct gconf_t *conf = (struct gconf_t*) calloc(1, sizeof(struct gconf_t));
 	*conf = ((struct gconf_t) {
 		.dht_port = DHT_PORT,
 		.af = AF_UNSPEC,
@@ -451,11 +450,10 @@ bool conf_setup(int argc, char **argv)
 {
 	const char *opt;
 	const char *val;
-	int i;
 
 	gconf = conf_alloc();
 
-	for (i = 1; i < argc; ++i) {
+	for (size_t i = 1; i < argc; ++i) {
 		opt = argv[i];
 		val = argv[i + 1];
 
