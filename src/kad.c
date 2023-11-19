@@ -317,8 +317,6 @@ bool kad_start_search(FILE *fp, const uint8_t id[], uint16_t port)
 	int rc4 = -1;
 	int rc6 = -1;
 
-	//results_clear(id);
-
 	if (af == AF_UNSPEC || af == AF_INET) {
 		rc4 = dht_search(id, port, AF_INET, dht_callback_func, NULL);
 	}
