@@ -511,13 +511,12 @@ int cli_client(int argc, char *argv[])
 #else
 		ssize_t size = read(sock, buffer, sizeof(buffer));
 #endif
-		if (size == 0) {
-			// socket closed
-			break;
-		} else if (size > 0) {
+		if (size > 0 && size <= sizeof(buffer)) {
 			// Print to console
-			buffer[size] = 0;
-			printf("%s", buffer);
+			printf("%.*s", (int) size, buffer);
+		} else {
+			// socket closed (0) or error
+			break;
 		}
 	}
 
