@@ -6,7 +6,7 @@ A Distributed Hash Table (DHT) is a distributed system storing key/value pairs u
 
 Features:
 
-* small at 80KB (compiled with `-Os`)
+* small at 110KB
 * announce and search for hashes
 * run as bootstrap node
 * scripting capabilities
@@ -21,8 +21,8 @@ Compilation is rather simple:
 $ git clone https://github.com/mwarning/dhtd.git
 $ cd dhtd
 $ make
-$ cd build
-$ ./dhtd -h
+[...]
+$ ./build/dhtd -h
 ```
 
 (The `$` is the terminal prompt, it is included here to distinguish commands from program output)
@@ -155,11 +155,11 @@ List of commands that can be send to a running `dhtd` instance via the command l
 
 Legend:
 
-`<id>`: 20 bytes as base16 (hexadecimal) or base32 string
+`<id>` 20 bytes as base16 (hexadecimal) or base32 string
 
-`<port>`: Network port number between 1-65536
+`<port>` Network port number between 1-65536
 
-`<address>`: IPv4 or IPv6 address
+`<address>` IPv4 or IPv6 address
 
 ## License
 
