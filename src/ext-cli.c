@@ -42,7 +42,6 @@ static const char* g_server_usage =
 	"  announce-stop <id>\n"
 	"  searches\n"
 	"  announcements\n"
-	"  block <address>\n"
 	"  peer <address>\n"
 	"  constants|blocklist|peers|buckets|storage\n";
 
@@ -69,8 +68,6 @@ static const char* g_server_help =
 	"    Print a list of all announcements.\n"
 	"  peer <address>:<port>\n"
 	"    Add a peer by address.\n"
-	"  block <address>\n"
-	"    Block a certain IP address for some time.\n"
 	"  constants|blocklist|peers|buckets|storage\n"
 	"    Print various internal data.\n"
 	" -----\n"
@@ -108,7 +105,6 @@ enum {
 	oAnnounceStart,
 	oAnnounceStop,
 	oPrintBlocked,
-	oBlock,
 	oPrintConstants,
 	oPrintPeers,
 	oPrintAnnouncements,
@@ -127,7 +123,6 @@ static const option_t g_options[] = {
 	{"status", 1, oStatus},
 	{"announce-start", 2, oAnnounceStart},
 	{"announce-stop", 2, oAnnounceStop},
-	{"block", 2, oBlock},
 	{"blocklist", 1, oPrintBlocked},
 	{"constants", 1, oPrintConstants},
 	{"peers", 1, oPrintPeers},
@@ -164,7 +159,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 
 	// parse identifier
 	switch (option->code) {
-		case oSearch: case oResults: case oQuery: case oBlock: case oAnnounceStop:
+		case oSearch: case oResults: case oQuery: case oAnnounceStop:
 		if (!parse_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
 			fprintf(fp, "Failed to parse identifier.\n");
 			return;
@@ -216,15 +211,6 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 	case oAnnounceStop:
 		announcement_remove(id);
 		break;
-	case oBlock: {
-		IP address;
-		if (addr_parse(&address, argv[1], NULL, gconf->af)) {
-			kad_block(&address);
-			fprintf(fp, "Added to blocklist: %s\n", str_addr(&address));
-		} else {
-			fprintf(fp, "Invalid address.\n");
-		}
-	}
 	case oPrintSearches:
 		kad_print_searches(fp);
 		break;

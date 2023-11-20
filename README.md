@@ -148,8 +148,6 @@ List of commands that can be send to a running `dhtd` instance via the command l
   Print a list of all announcements.
 * `peer <address>:<port>`  
   Add a peer by address.
-* `block <address>`  
-  Block a certain IP address for some time.
 * `constants|blocklist|peers|buckets|storage`  
   Print various internal data.
 
