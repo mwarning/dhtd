@@ -427,16 +427,17 @@ int cli_client(int argc, char *argv[])
 
 	size_t pos = 0;
 	if (!isatty(fileno(stdin))) {
-		int c = 0;
+		bool all = false;
 		while (pos < sizeof(buffer)) {
-			c = getchar();
+			int c = getchar();
 			if (c == -1) {
+				all = true;
 				break;
 			}
 			buffer[pos++] = c;
 		}
 
-		if (c != -1) {
+		if (!all) {
 			fprintf(stderr, "Input too long!\n");
 			return EXIT_FAILURE;
 		}
