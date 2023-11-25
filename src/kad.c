@@ -381,7 +381,7 @@ int kad_export_peers(FILE *fp)
 	return num4 + num6;
 }
 
-static void kad_print_buckets_interal(FILE* fp, const struct bucket *b)
+static void kad_print_buckets_interal(FILE* fp, int af, const struct bucket *b)
 {
 	size_t i, j;
 
@@ -399,7 +399,7 @@ static void kad_print_buckets_interal(FILE* fp, const struct bucket *b)
 		b = b->next;
 	}
 
-	fprintf(fp, "Found %u buckets.\n", (unsigned) j);
+	fprintf(fp, "Found %u %s buckets.\n", (unsigned) j, (af == AF_INET) ? "IPv4" : "IPv6");
 }
 
 // Print buckets (leaf/finger table)
@@ -408,11 +408,11 @@ void kad_print_buckets(FILE* fp)
 	int af = gconf->af;
 
 	if (af == AF_UNSPEC || af == AF_INET) {
-		kad_print_buckets_interal(fp, buckets);
+		kad_print_buckets_interal(fp, AF_INET, buckets);
 	}
 
 	if (af == AF_UNSPEC || af == AF_INET6) {
-		kad_print_buckets_interal(fp, buckets6);
+		kad_print_buckets_interal(fp, AF_INET6, buckets6);
 	}
 }
 
