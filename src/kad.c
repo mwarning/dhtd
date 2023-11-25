@@ -350,11 +350,12 @@ bool kad_block(const IP* addr)
 // Export known peers; the maximum is 400 nodes
 int kad_export_peers(FILE *fp)
 {
-	IP4 addr4[200];
-	IP6 addr6[200];
+	// get number of good nodes
+	int num4 = kad_count_bucket(buckets, true);
+	int num6 = kad_count_bucket(buckets6, true);
 
-	int num6 = ARRAY_SIZE(addr4);
-	int num4 = ARRAY_SIZE(addr6);
+	IP4 *addr4 = (IP4*) malloc(num4 * sizeof(IP4));
+	IP6 *addr6 = (IP6*) malloc(num6 * sizeof(IP6));
 
 	dht_get_nodes(addr4, &num4, addr6, &num6);
 
@@ -373,6 +374,9 @@ int kad_export_peers(FILE *fp)
 		fprintf(fp, "%s\n", str_addr((IP*) &addr6[i]));
 #endif
 	}
+
+	free(addr4);
+	free(addr6);
 
 	return num4 + num6;
 }
