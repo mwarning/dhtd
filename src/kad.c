@@ -377,12 +377,10 @@ int kad_export_peers(FILE *fp)
 	return num4 + num6;
 }
 
-// Print buckets (leaf/finger table)
-void kad_print_buckets(FILE* fp)
+static void kad_print_buckets_interal(FILE* fp, const struct bucket *b)
 {
 	size_t i, j;
 
-	struct bucket *b = (gconf->af == AF_INET) ? buckets : buckets6;
 	for (j = 0; b; ++j) {
 		fprintf(fp, " bucket: %s\n", str_id(b->first));
 
@@ -396,7 +394,22 @@ void kad_print_buckets(FILE* fp)
 		fprintf(fp, "  Found %u nodes.\n", (unsigned) i);
 		b = b->next;
 	}
+
 	fprintf(fp, "Found %u buckets.\n", (unsigned) j);
+}
+
+// Print buckets (leaf/finger table)
+void kad_print_buckets(FILE* fp)
+{
+	int af = gconf->af;
+
+	if (af == AF_UNSPEC || af == AF_INET) {
+		kad_print_buckets_interal(fp, buckets);
+	}
+
+	if (af == AF_UNSPEC || af == AF_INET6) {
+		kad_print_buckets_interal(fp, buckets6);
+	}
 }
 
 // Print searches
