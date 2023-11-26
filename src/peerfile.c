@@ -32,11 +32,7 @@ static struct peer *g_peers = NULL;
 
 void peerfile_export(void)
 {
-	const char *filename;
-	FILE *fp;
-	int num;
-
-	filename = gconf->peerfile;
+	const char *filename = gconf->peerfile;
 	if (filename == NULL) {
 		return;
 	}
@@ -46,7 +42,7 @@ void peerfile_export(void)
 		return;
 	}
 
-	fp = fopen(filename, "w");
+	FILE *fp = fopen(filename, "w");
 	if (fp == NULL) {
 		log_warning("PEERFILE: Cannot open file '%s' for peer export: %s", filename, strerror(errno));
 		return;
@@ -54,7 +50,7 @@ void peerfile_export(void)
 
 	log_info("PEERFILE: Export peers to %s", filename);
 
-	num = kad_export_peers(fp);
+	int num = kad_export_peers(fp);
 	fclose(fp);
 
 	// No peers to export
