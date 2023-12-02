@@ -90,6 +90,11 @@ static void compress_entries()
 
 void net_loop(void)
 {
+	// call all callbacks immediately
+	for (size_t i = 0; i < g_count; i++) {
+		g_cbs[i](-1, g_fds[i].fd);
+	}
+
 	while (gconf->is_running) {
 		int rc = poll(g_fds, g_count, 1000);
 
