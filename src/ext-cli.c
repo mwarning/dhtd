@@ -136,7 +136,7 @@ static const option_t g_options[] = {
 static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 {
 	uint8_t id[SHA1_BIN_LENGTH];
-	char *argv[8];
+	const char *argv[8];
 	int argc = setargs(&argv[0], ARRAY_SIZE(argv), request);
 
 	if (argc == 0) {

@@ -18,7 +18,7 @@
 
 
 // separate a string into a list of arguments (int argc, char **argv)
-int setargs(char **argv, int argv_size, char *args)
+int setargs(const char **argv, int argv_size, char *args)
 {
 	int count = 0;
 
