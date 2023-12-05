@@ -8,8 +8,10 @@ Features:
 
 * small at 110KB
 * announce and search for hashes
+* local peer discovery
 * run as bootstrap node
 * scripting capabilities
+* available for OpenWrt
 
 ## Quick Start
 
