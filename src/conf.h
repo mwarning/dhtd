@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include "main.h"
 
+// Measurement duration for traffic
+#define TRAFFIC_DURATION_SECONDS 8
 
 extern const char *dhtd_version_str;
 
@@ -72,6 +74,13 @@ struct gconf_t {
 	char *cli_path;
 	bool cli_disable_stdin;
 #endif
+
+	// Traffic measurement
+	time_t traffic_time;
+	uint64_t traffic_in_sum;
+	uint64_t traffic_out_sum;
+	uint32_t traffic_in[TRAFFIC_DURATION_SECONDS];
+	uint32_t traffic_out[TRAFFIC_DURATION_SECONDS];
 };
 
 extern struct gconf_t *gconf;
