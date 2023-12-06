@@ -420,23 +420,24 @@ int kad_export_peers(FILE *fp)
 
 static void kad_print_buckets_interal(FILE* fp, int af, const struct bucket *b)
 {
-	size_t i, j;
+	unsigned bucket_i, node_i, all_nodes = 0;
 
-	for (j = 0; b; ++j) {
+	for (bucket_i = 0; b; ++bucket_i) {
 		fprintf(fp, " bucket: %s\n", str_id(b->first));
 
-		struct node * n = b->nodes;
-		for (i = 0; n; ++i) {
+		struct node *n = b->nodes;
+		for (node_i = 0; n; ++node_i) {
 			fprintf(fp, "   id: %s\n", str_id(n->id));
 			fprintf(fp, "	 address: %s\n", str_addr(&n->ss));
 			fprintf(fp, "	 pinged: %d\n", n->pinged);
 			n = n->next;
 		}
-		fprintf(fp, "  Found %u nodes.\n", (unsigned) i);
+		fprintf(fp, "  %u nodes.\n", node_i);
+		all_nodes += node_i;
 		b = b->next;
 	}
 
-	fprintf(fp, "Found %u %s buckets.\n", (unsigned) j, (af == AF_INET) ? "IPv4" : "IPv6");
+	fprintf(fp, "Found %u %s buckets with %u nodes.\n", bucket_i, (af == AF_INET) ? "IPv4" : "IPv6", all_nodes);
 }
 
 // Print buckets (leaf/finger table)
