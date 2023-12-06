@@ -169,3 +169,8 @@ MIT/X11
 
 * DHTd: Moritz Warning (http://github.com/mwarning/dhtd)
 * Kademlia DHT: Juliusz Chroboczek (https://github.com/jech/dht)
+
+## Links
+
+* [unetd](https://openwrt.org/docs/techref/unetd) WireGuard based VPN connection manager for OpenWrt (with optional DHT), [sources](https://git.openwrt.org/project/unetd.git)
+* Formal [specification](http://maude.sip.ucm.es/kademlia/files/pita_kademlia.pdf) of the Kademlia distributed hash table
