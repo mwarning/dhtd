@@ -41,14 +41,16 @@ Example output after a few minutes:
 
 ```
 $ dhtd-ctl status
-DHTd 0.2.1 ( cli debug lpd )
-DHT id: 9e918df4c10a3d2127d86311b20195447e70376b
+DHTd 0.2.6 ( cli debug lpd )
+DHT id: c0f459a04b4d0191530f3157e3433e7c99328efa
+DHT uptime: 3h26m
 DHT listen on: IPv4+IPv6 / device: <any> / port: 6881
-DHT nodes: 376 IPv4 (310 good), 344 IPv6 (239 good)
-DHT storage: 43 entries with 145 addresses
-DHT searches: 0 IPv4 (0 done), 0 IPv6 active (0 done),
+DHT nodes: 384 IPv4 (341 good), 11 IPv6 (0 good)
+DHT storage: 55 entries with 76 addresses
+DHT searches: 0 IPv4 (0 done), 0 IPv6 active (0 done)
 DHT announcements: 0
-DHT blocklist: 0
+DHT blocklist: 2
+DHT traffic: 5.5 M, 134 B/s (in) / 14.2 M, 322 B/s (out)
 ```
 
 Start a query:
