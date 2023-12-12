@@ -394,6 +394,14 @@ int kad_export_peers(FILE *fp)
 	IP4 *addr4 = (IP4*) malloc(num4 * sizeof(IP4));
 	IP6 *addr6 = (IP6*) malloc(num6 * sizeof(IP6));
 
+	if (addr4 == NULL) {
+		num4 = 0;
+	}
+
+	if (addr6 == NULL) {
+		num6 = 0;
+	}
+
 	dht_get_nodes(addr4, &num4, addr6, &num6);
 
 	for (size_t i = 0; i < num4; i++) {
@@ -412,8 +420,13 @@ int kad_export_peers(FILE *fp)
 #endif
 	}
 
-	free(addr4);
-	free(addr6);
+	if (addr4) {
+		free(addr4);
+	}
+
+	if (addr6) {
+		free(addr6);
+	}
 
 	return num4 + num6;
 }
