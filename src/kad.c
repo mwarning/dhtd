@@ -510,9 +510,9 @@ void kad_print_storage(FILE *fp)
 		fprintf(fp, " id: %s\n", str_id(s->id));
 		for (j = 0; j < s->numpeers; ++j) {
 			struct peer *p = &s->peers[j];
-			fprintf(fp, "   peer: %s\n", str_addr2(&p->ip[0], p->len, p->port));
+			fprintf(fp, "   address: %s\n", str_addr2(&p->ip[0], p->len, p->port));
 		}
-		fprintf(fp, "  Found %u peers.\n", (unsigned) j);
+		fprintf(fp, "  Found %u addresses.\n", (unsigned) j);
 		s = s->next;
 	}
 	fprintf(fp, " Found %u stored hashes from received announcements.\n", (unsigned) i);
