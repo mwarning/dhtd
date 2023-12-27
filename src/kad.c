@@ -404,7 +404,7 @@ int kad_export_peers(FILE *fp)
 
 	dht_get_nodes(addr4, &num4, addr6, &num6);
 
-	for (size_t i = 0; i < num4; i++) {
+	for (size_t i = 0; i < num4; ++i) {
 #ifdef __CYGWIN__
 		fprintf(fp, "%s\r\n", str_addr((IP*) &addr4[i]));
 #else
@@ -412,7 +412,7 @@ int kad_export_peers(FILE *fp)
 #endif
 	}
 
-	for (size_t i = 0; i < num6; i++) {
+	for (size_t i = 0; i < num6; ++i) {
 #ifdef __CYGWIN__
 		fprintf(fp, "%s\r\n", str_addr((IP*) &addr6[i]));
 #else
