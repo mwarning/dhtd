@@ -90,6 +90,9 @@ static void compress_entries()
 
 void net_loop(void)
 {
+	bool call_all = false;
+	time_t call_all_time = time(NULL);
+
 	// call all callbacks immediately
 	for (size_t i = 0; i < g_count; i++) {
 		g_cbs[i](-1, g_fds[i].fd);
@@ -103,13 +106,18 @@ void net_loop(void)
 			break;
 		}
 
-		time_t n = time(NULL);
-		int all = (n > gconf->time_now);
-		gconf->time_now = n;
+		gconf->time_now = time(NULL);
+
+		if ((gconf->time_now - call_all_time) >= 1) {
+			call_all = true;
+			call_all_time = gconf->time_now;
+		} else {
+			call_all = false;
+		}
 
 		for (size_t i = 0; i < g_count; i++) {
 			int revents = g_fds[i].revents;
-			if (revents || all) {
+			if (revents || call_all) {
 				g_cbs[i](revents, g_fds[i].fd);
 			}
 		}
