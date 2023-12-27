@@ -48,21 +48,25 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	}
 }
 
-// needs to be called at least once per second
 static void record_traffic(uint32_t in_bytes, uint32_t out_bytes)
 {
-	gconf->traffic_in_sum += in_bytes;
-	gconf->traffic_out_sum += out_bytes;
+    gconf->traffic_in_sum += in_bytes;
+    gconf->traffic_out_sum += out_bytes;
 
-	size_t i = gconf->time_now % TRAFFIC_DURATION_SECONDS;
-	if (gconf->traffic_time == gconf->time_now) {
-		gconf->traffic_in[i] += in_bytes;
-		gconf->traffic_out[i] += out_bytes;
-	} else {
-		gconf->traffic_time = gconf->time_now;
-		gconf->traffic_in[i] = in_bytes;
-		gconf->traffic_out[i] = out_bytes;
-	}
+    size_t idx = gconf->time_now % TRAFFIC_DURATION_SECONDS;
+    uint32_t since = (gconf->time_now - gconf->traffic_time);
+    size_t n = MIN(since, TRAFFIC_DURATION_SECONDS);
+
+    // clear old traffic measurement buckets
+    for (size_t i = 0; i < n; ++i) {
+        size_t j = (TRAFFIC_DURATION_SECONDS + idx - i - 1) % TRAFFIC_DURATION_SECONDS;
+        gconf->traffic_in[j] = 0;
+        gconf->traffic_out[j] = 0;
+    }
+
+    gconf->traffic_time = gconf->time_now;
+    gconf->traffic_in[idx] += out_bytes;
+    gconf->traffic_out[idx] += in_bytes;
 }
 
 // Handle incoming packets and pass them to the DHT code
@@ -85,9 +89,6 @@ void dht_handler(int rc, int sock)
 
 		// The DHT code expects the message to be null-terminated.
 		buf[buflen] = '\0';
-	} else {
-		// record_traffic() needs to be called at least once per second
-		record_traffic(0, 0);
 	}
 
 	if (buflen > 0) {
