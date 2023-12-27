@@ -41,7 +41,7 @@ Example output after a few minutes:
 
 ```
 $ dhtd-ctl status
-DHTd 0.2.6 ( cli debug lpd )
+DHTd 1.0.0 ( cli debug lpd )
 DHT id: c0f459a04b4d0191530f3157e3433e7c99328efa
 DHT uptime: 3h26m
 DHT listen on: IPv4+IPv6 / device: <any> / port: 6881
