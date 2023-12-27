@@ -64,20 +64,19 @@ static struct result_t *find_result(const struct search_t *search, const uint8_t
 	return NULL;
 }
 
-static void on_new_search_result(const uint8_t id[], const uint8_t *ip, uint8_t length, uint16_t port)
+static void on_new_search_result(const char *path, const uint8_t id[], const uint8_t *ip, uint8_t length, uint16_t port)
 {
 	char command[1024];
 
 	// call script if configured
-	if (gconf->execute_path) {
-		int n = snprintf(command, sizeof(command), "%s %s %s &",
-			gconf->execute_path, str_id(id), str_addr2(ip, length, port)
-		);
-		if (n > 0 && n < sizeof(command)) {
-			system(command);
-		} else {
-			log_error("system() command too long");
-		}
+	int n = snprintf(command, sizeof(command), "%s %s %s &",
+		path, str_id(id), str_addr2(ip, length, port)
+	);
+
+	if (n > 0 && n < sizeof(command)) {
+		system(command);
+	} else {
+		log_error("system() command too long");
 	}
 }
 
@@ -110,7 +109,9 @@ static void result_add(struct search_t *search, const uint8_t id[], const uint8_
 			search->numresults6 += 1;
 		}
 
-		on_new_search_result(id, ip, length, port);
+		if (gconf->execute_path) {
+			on_new_search_result(gconf->execute_path, id, ip, length, port);
+		}
 	}
 }
 
