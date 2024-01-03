@@ -48,25 +48,31 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
 	}
 }
 
+static void clear_old_traffic_counters()
+{
+	size_t idx = gconf->time_now % TRAFFIC_DURATION_SECONDS;
+	uint32_t since = (gconf->time_now - gconf->traffic_time);
+	size_t n = MIN(since, TRAFFIC_DURATION_SECONDS);
+
+	// clear old traffic measurement buckets
+	for (size_t i = 0; i < n; ++i) {
+		size_t j = (TRAFFIC_DURATION_SECONDS + idx + i + 1) % TRAFFIC_DURATION_SECONDS;
+		gconf->traffic_in[j] = 0;
+		gconf->traffic_out[j] = 0;
+	}
+}
+
 static void record_traffic(uint32_t in_bytes, uint32_t out_bytes)
 {
-    gconf->traffic_in_sum += in_bytes;
-    gconf->traffic_out_sum += out_bytes;
+	clear_old_traffic_counters();
 
-    size_t idx = gconf->time_now % TRAFFIC_DURATION_SECONDS;
-    uint32_t since = (gconf->time_now - gconf->traffic_time);
-    size_t n = MIN(since, TRAFFIC_DURATION_SECONDS);
+	gconf->traffic_in_sum += in_bytes;
+	gconf->traffic_out_sum += out_bytes;
 
-    // clear old traffic measurement buckets
-    for (size_t i = 0; i < n; ++i) {
-        size_t j = (TRAFFIC_DURATION_SECONDS + idx - i - 1) % TRAFFIC_DURATION_SECONDS;
-        gconf->traffic_in[j] = 0;
-        gconf->traffic_out[j] = 0;
-    }
-
-    gconf->traffic_time = gconf->time_now;
-    gconf->traffic_in[idx] += out_bytes;
-    gconf->traffic_out[idx] += in_bytes;
+	size_t idx = gconf->time_now % TRAFFIC_DURATION_SECONDS;
+	gconf->traffic_time = gconf->time_now;
+	gconf->traffic_in[idx] += out_bytes;
+	gconf->traffic_out[idx] += in_bytes;
 }
 
 // Handle incoming packets and pass them to the DHT code
@@ -309,6 +315,7 @@ void kad_status(FILE *fp)
 	int nodes4_good = kad_count_bucket(buckets, true);
 	int nodes6_good = kad_count_bucket(buckets6, true);
 
+	clear_old_traffic_counters();
 	uint32_t traffic_sum_in = 0;
 	uint32_t traffic_sum_out = 0;
 	for (size_t i = 0; i < TRAFFIC_DURATION_SECONDS; ++i) {
