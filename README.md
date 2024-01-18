@@ -11,6 +11,7 @@ Features:
 * local peer discovery
 * run as bootstrap node
 * scripting capabilities
+* only libc as dependency
 * available for OpenWrt
 
 ## Quick Start
@@ -174,5 +175,6 @@ MIT/X11
 
 ## Links
 
+* [kademlia-dht](https://github.com/quarterblue/kademlia-dht) standalone DHT implementation in Rust
 * [unetd](https://openwrt.org/docs/techref/unetd) WireGuard based VPN connection manager for OpenWrt (with optional DHT), [sources](https://git.openwrt.org/project/unetd.git)
 * Formal [specification](http://maude.sip.ucm.es/kademlia/files/pita_kademlia.pdf) of the Kademlia distributed hash table
