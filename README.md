@@ -43,15 +43,15 @@ Example output after a few minutes:
 ```
 $ dhtd-ctl status
 DHTd 1.0.0 ( cli debug lpd )
-DHT id: c0f459a04b4d0191530f3157e3433e7c99328efa
-DHT uptime: 3h26m
+DHT id: 24e56b174415846be9050d628e8d8c0eda42de96
+DHT uptime: 120d6h
 DHT listen on: IPv4+IPv6 / device: <any> / port: 6881
-DHT nodes: 384 IPv4 (341 good), 11 IPv6 (0 good)
-DHT storage: 55 entries with 76 addresses
+DHT nodes: 1090 IPv4 (402 good), 373 IPv6 (349 good)
+DHT storage: 280 entries with 648 addresses
 DHT searches: 0 IPv4 (0 done), 0 IPv6 active (0 done)
 DHT announcements: 0
-DHT blocklist: 2
-DHT traffic: 5.5 M, 134 B/s (in) / 14.2 M, 322 B/s (out)
+DHT blocklist: 3
+DHT traffic: 24.6 G, 6.8 K/s (in) / 68.5 G, 2.5 K/s (out)
 ```
 
 Start a query:
