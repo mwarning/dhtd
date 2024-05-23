@@ -28,13 +28,13 @@ static const char *g_announce_args[32] = { 0 };
 
 const char *dhtd_version_str = PROGRAM_NAME " " PROGRAM_VERSION " ("
 #ifdef CLI
-" cli"
+" command-line-interface"
 #endif
 #ifdef DEBUG
-" debug"
+" debug-build"
 #endif
 #ifdef LPD
-" lpd"
+" local-peer-discovery"
 #endif
 " )";
 
