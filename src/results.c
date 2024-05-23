@@ -133,8 +133,8 @@ void results_add(const uint8_t id[], int af, const void *data, size_t data_len)
 
     switch (af) {
         case AF_INET: {
-            int got = (data_len / sizeof(struct dht_addr4_t));
-            int add = MIN(got, search->maxresults - numresults);
+            size_t got = (data_len / sizeof(struct dht_addr4_t));
+            size_t add = MIN(got, search->maxresults - numresults);
             struct dht_addr4_t *data4 = (struct dht_addr4_t *) data;
             for (size_t i = 0; i < add; ++i) {
                 result_add(search, id, &data4[i].addr[0], 4, (uint16_t) data4[i].port);
@@ -142,8 +142,8 @@ void results_add(const uint8_t id[], int af, const void *data, size_t data_len)
             break;
         }
         case AF_INET6: {
-            int got = (data_len / sizeof(struct dht_addr6_t));
-            int add = MIN(got, search->maxresults - numresults);
+            size_t got = (data_len / sizeof(struct dht_addr6_t));
+            size_t add = MIN(got, search->maxresults - numresults);
             struct dht_addr6_t *data6 = (struct dht_addr6_t *) data;
             for (size_t i = 0; i < add; ++i) {
                 result_add(search, id, &data6[i].addr[0], 16, (uint16_t) data6[i].port);
