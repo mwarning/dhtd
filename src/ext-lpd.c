@@ -61,9 +61,10 @@ struct lpd_state g_lpd6 = {
     .sock_listen = -1
 };
 
-static bool filter_ifa(const struct ifaddrs *ifa)
+static bool filter_ifa(const struct ifaddrs *ifa, int family)
 {
     if ((ifa->ifa_addr == NULL)
+            || (ifa->ifa_addr->sa_family != family)
             || !(ifa->ifa_flags & IFF_RUNNING)
             || (ifa->ifa_flags & IFF_LOOPBACK)) {
         return false;
@@ -83,13 +84,11 @@ static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
     int family = lpd->mcast_addr.ss_family;
 
     for (const struct ifaddrs *ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
-        int ifa_family = ifa->ifa_addr->sa_family;
-
-        if (!filter_ifa(ifa) || family != ifa_family) {
+        if (!filter_ifa(ifa, family)) {
             continue;
         }
 
-        if (ifa_family == AF_INET) {
+        if (ifa->ifa_addr->sa_family == AF_INET) {
             struct ip_mreq mcastReq = {0};
 
             mcastReq.imr_multiaddr = ((IP4*) &lpd->mcast_addr)->sin_addr;
@@ -131,13 +130,11 @@ static void send_mcasts(const struct lpd_state* lpd, const struct ifaddrs *ifas)
     const char *prev_ifname = NULL;
 
     for (const struct ifaddrs *ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
-        int ifa_family = ifa->ifa_addr->sa_family;
-
-        if (!filter_ifa(ifa) || family != ifa_family) {
+        if (!filter_ifa(ifa, family)) {
             continue;
         }
 
-        if (ifa_family == AF_INET) {
+        if (ifa->ifa_addr->sa_family == AF_INET) {
             struct in_addr addr = ((struct sockaddr_in*) ifa->ifa_addr)->sin_addr;
 
             if (setsockopt(lpd->sock_send, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) < 0) {
