@@ -96,7 +96,7 @@ static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
 
             // ignore error (we might already be subscribed)
             if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) != 0) {
-                log_error("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
+                log_warning("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
             }
         } else { // AF_INET6
             // skip previous interface (relies on order of ifas)
@@ -114,7 +114,7 @@ static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
 
             // ignore error (we might already be subscribed)
             if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) != 0) {
-                log_error("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
+                log_warning("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
             }
         }
     }
