@@ -95,7 +95,7 @@ static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
             mcastReq.imr_interface.s_addr = htonl(INADDR_ANY);
 
             // ignore error (we might already be subscribed)
-            if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) < 0) {
+            if (setsockopt(lpd->sock_listen, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void const*)&mcastReq, sizeof(mcastReq)) != 0) {
                 log_error("LPD: failed to join IPv4 multicast group: %s", strerror(errno));
             }
         } else { // AF_INET6
@@ -113,7 +113,7 @@ static void join_mcast(const struct lpd_state* lpd, const struct ifaddrs *ifas)
             mreq6.ipv6mr_interface = ifindex;
 
             // ignore error (we might already be subscribed)
-            if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) < 0) {
+            if (setsockopt(lpd->sock_listen, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq6, sizeof(mreq6)) != 0) {
                 log_error("LPD: failed to join IPv6 multicast group: %s", strerror(errno));
             }
         }
@@ -137,7 +137,7 @@ static void send_mcasts(const struct lpd_state* lpd, const struct ifaddrs *ifas)
         if (ifa->ifa_addr->sa_family == AF_INET) {
             struct in_addr addr = ((struct sockaddr_in*) ifa->ifa_addr)->sin_addr;
 
-            if (setsockopt(lpd->sock_send, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) < 0) {
+            if (setsockopt(lpd->sock_send, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) != 0) {
                 log_error("setsockopt(IP_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
                 continue;
             }
@@ -150,7 +150,7 @@ static void send_mcasts(const struct lpd_state* lpd, const struct ifaddrs *ifas)
             }
 
             unsigned ifindex = if_nametoindex(ifa->ifa_name);
-            if (setsockopt(lpd->sock_send, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) < 0) {
+            if (setsockopt(lpd->sock_send, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) != 0) {
                 log_error("setsockopt(IPV6_MULTICAST_IF) %s %s", ifa->ifa_name, strerror(errno));
                 continue;
             }
@@ -293,7 +293,7 @@ static int create_receive_socket(const IP *mcast_addr)
     if (af == AF_INET6) {
         // IPv6
         int loop = 0;
-        if (setsockopt(sock, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (char *)&loop, sizeof(loop)) < 0) {
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (char *)&loop, sizeof(loop)) != 0) {
             goto fail;
         }
     } else {
