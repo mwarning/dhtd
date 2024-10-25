@@ -11,11 +11,11 @@
 */
 
 struct announcement_t {
-	struct announcement_t *next;
-	uint8_t id[SHA1_BIN_LENGTH];
-	uint16_t port;
-	time_t lifetime; // Keep entry refreshed until the lifetime expires
-	time_t refresh; // Next time the entry need to be refreshed
+    struct announcement_t *next;
+    uint8_t id[SHA1_BIN_LENGTH];
+    uint16_t port;
+    time_t lifetime; // Keep entry refreshed until the lifetime expires
+    time_t refresh; // Next time the entry need to be refreshed
 };
 
 void announces_setup(void);
