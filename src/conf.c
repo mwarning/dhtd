@@ -416,6 +416,7 @@ bool conf_load(void)
             announces_add(NULL, id, port, LONG_MAX);
         } else {
             log_error("Invalid announcement: %s", arg);
+            return false;
         }
     }
 
