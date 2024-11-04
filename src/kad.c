@@ -48,7 +48,7 @@ void dht_callback_func(void *closure, int event, const uint8_t *info_hash, const
     }
 }
 
-static void clear_old_traffic_counters()
+static void clear_old_traffic_counters(void)
 {
     size_t idx = gconf->time_now % TRAFFIC_DURATION_SECONDS;
     uint32_t since = (gconf->time_now - gconf->traffic_time);

@@ -423,7 +423,7 @@ bool conf_load(void)
     return true;
 }
 
-static struct gconf_t *conf_alloc()
+static struct gconf_t *conf_alloc(void)
 {
     time_t now = time(NULL);
 
