@@ -24,10 +24,9 @@
 * Local Peer Discovery
 */
 
-#ifdef __CYGWIN__
-#ifndef AF_PACKET
-#define AF_PACKET 17
-#endif
+#if defined(__FreeBSD__)
+#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
+#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
 #endif
 
 enum {
