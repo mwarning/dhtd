@@ -1,13 +1,15 @@
 # DHTd
 
-A standalone [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect to the mainline BitTorrent network. Announce identifiers and query them from the command line to get a list of IP addresses of the nodes that announce them.
+A standalone [Kademlia DHT](https://en.wikipedia.org/wiki/Kademlia) (Distribute Hash Table) to connect to the mainline BitTorrent network.
 
-A Distributed Hash Table (DHT) is a distributed system storing key/value pairs used by BitTorrent clients to find peers. DHTd can be used in the same way to find the IP address of other instances in a decentralized way. Please note that DHTd does not provide any authentication.
+A Distributed Hash Table (DHT) is a distributed system storing key/value pairs used by BitTorrent clients to find peers. DHTd can be used in the same way to find the IP address of other instances in a decentralized way without any authentication. Or you can use it as a bootstrap node.
+
+Otherwise you can think of it as a [Tamagotchi](https://en.wikipedia.org/wiki/Tamagotchi) for people who are into decentralized networks. :-)
 
 Features:
 
 * small at 110KB
-* announce and search for hashes
+* announce and lookup for hashes
 * local peer discovery
 * run as bootstrap node
 * scripting capabilities
