@@ -160,7 +160,7 @@ List of commands that can be send to a running `dhtd` instance via the command l
 
 Legend:
 
-`<id>` 20 bytes as base16 (hexadecimal) or base32 string
+`<id>` 20 bytes as hexadecimal string
 
 `<port>` Network port number between 1-65536
 

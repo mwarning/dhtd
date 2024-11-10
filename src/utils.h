@@ -42,8 +42,6 @@ bool parse_id(uint8_t id[], size_t idsize, const char query[], size_t querysize)
 bool is_announcement(const char query[]);
 bool parse_annoucement(uint8_t id[], int *port, const char query[], int default_port);
 
-bool bytes_from_base32(uint8_t dst[], size_t dstsize, const char src[], size_t srcsize);
-char *bytes_to_base32(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize);
 bool bytes_from_base16(uint8_t dst[], size_t dstsize, const char src[], size_t srcsize);
 char *bytes_to_base16(char dst[], size_t dstsize, const uint8_t src[], size_t srcsize);
 
