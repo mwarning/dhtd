@@ -16,6 +16,11 @@
 #include "conf.h"
 #include "utils.h"
 
+#ifndef AF_INET6_CONST
+    #define AF_INET6_CONST 10  // Standard value for IPv6 (adjust if needed)
+#else
+    #define AF_INET6_CONST AF_INET6  // Use the system's AF_INET6 directly
+#endif
 
 // separate a string into a list of arguments (int argc, char **argv)
 int setargs(const char **argv, int argv_size, char *args)
@@ -227,7 +232,7 @@ bool port_set(IP *addr, uint16_t port)
     case AF_INET:
         ((IP4 *)addr)->sin_port = htons(port);
         return true;
-    case AF_INET6:
+    case AF_INET6_CONST:
         ((IP6 *)addr)->sin6_port = htons(port);
         return true;
     default:
@@ -266,7 +271,7 @@ const char *str_af(int af) {
     switch (af) {
     case AF_INET:
         return "IPv4";
-    case AF_INET6:
+    case AF_INET6_CONST:
         return "IPv6";
     case AF_UNSPEC:
         return "IPv4+IPv6";
@@ -302,7 +307,7 @@ const char *str_addr2(const void *ip, uint8_t length, uint16_t port)
 const char *str_addr(const IP *addr)
 {
     switch (addr->ss_family) {
-    case AF_INET6: {
+    case AF_INET6_CONST: {
         uint16_t port = ntohs(((IP6 *)addr)->sin6_port);
         return str_addr2(&((IP6 *)addr)->sin6_addr, 16, port);
     }
@@ -323,7 +328,7 @@ bool addr_is_localhost(const IP *addr)
     switch (addr->ss_family) {
     case AF_INET:
         return (memcmp(&((IP4 *)addr)->sin_addr, &inaddr_loopback, 4) == 0);
-    case AF_INET6:
+    case AF_INET6_CONST:
         return (memcmp(&((IP6 *)addr)->sin6_addr, &in6addr_loopback, 16) == 0);
     default:
         return false;
@@ -335,7 +340,7 @@ bool addr_is_multicast(const IP *addr)
     switch (addr->ss_family) {
     case AF_INET:
         return IN_MULTICAST(ntohl(((IP4*) addr)->sin_addr.s_addr));
-    case AF_INET6:
+    case AF_INET6_CONST:
         return IN6_IS_ADDR_MULTICAST(&((IP6*) addr)->sin6_addr);
     default:
         return false;
@@ -347,7 +352,7 @@ int addr_port(const IP *addr)
     switch (addr->ss_family) {
     case AF_INET:
         return ntohs(((IP4 *)addr)->sin_port);
-    case AF_INET6:
+    case AF_INET6_CONST:
         return ntohs(((IP6 *)addr)->sin6_port);
     default:
         return 0;
@@ -359,7 +364,7 @@ int addr_len(const IP *addr)
     switch (addr->ss_family) {
     case AF_INET:
         return sizeof(IP4);
-    case AF_INET6:
+    case AF_INET6_CONST:
         return sizeof(IP6);
     default:
         return 0;
