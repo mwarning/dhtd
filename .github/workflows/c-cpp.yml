@@ -17,10 +17,6 @@ jobs:
     - uses: bjia56/setup-cosmocc@main
       with:
         version: "latest"
-        
-    - name: gcc make
-      run: make
-
     - name: cosmocc
       env:
           FEATURES: cli
