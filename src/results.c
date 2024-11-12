@@ -19,6 +19,12 @@
 * Therefore, results are collected and stored here.
 */
 
+#ifndef AF_INET6_CONST
+    #define AF_INET6_CONST 10  // Standard value for IPv6 (adjust if needed)
+#else
+    #define AF_INET6_CONST AF_INET6  // Use the system's AF_INET6 directly
+#endif
+
 struct result_t {
     uint8_t ip[16];
     uint8_t length;
@@ -142,7 +148,7 @@ void results_add(const uint8_t id[], int af, const void *data, size_t data_len)
             }
             break;
         }
-        case AF_INET6: {
+        case AF_INET6_CONST: {
             size_t got = (data_len / sizeof(struct dht_addr6_t));
             size_t add = MIN(got, search->maxresults - numresults);
             struct dht_addr6_t *data6 = (struct dht_addr6_t *) data;
@@ -158,7 +164,7 @@ unsigned results_count(const uint8_t id[], int af)
     struct search_t *search = find_search(id);
     if (search) switch (af) {
         case AF_INET: return search->numresults4;
-        case AF_INET6: return search->numresults6;
+        case AF_INET6_CONST: return search->numresults6;
         default: return search->numresults4 + search->numresults6;
     }
     return 0;
