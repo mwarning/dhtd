@@ -378,6 +378,12 @@ print_hex(FILE *f, const unsigned char *buf, int buflen)
         fprintf(f, "%02x", buf[i]);
 }
 
+#ifndef AF_INET6_CONST
+    #define AF_INET6_CONST 10  // Standard value for IPv6
+#else
+    #define AF_INET6_CONST AF_INET6  // Use the system's AF_INET6 directly
+#endif
+
 static int
 is_martian(const struct sockaddr *sa)
 {
@@ -390,7 +396,7 @@ is_martian(const struct sockaddr *sa)
             (address[0] == 127) ||
             ((address[0] & 0xE0) == 0xE0);
     }
-    case AF_INET6: {
+    case AF_INET6_CONST: {
         struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)sa;
         const unsigned char *address = (const unsigned char*)&sin6->sin6_addr;
         return sin6->sin6_port == 0 ||
