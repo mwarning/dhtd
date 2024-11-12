@@ -1,6 +1,6 @@
 CC ?= gcc 
-ifeq ($(CC),cosmocc)
-    CFLAGS += -static -nostdlib -fno-pie -mno-red-zone -Wno-implicit-function-declaration -mclang
+ifneq (,$(findstring cosmocc,$(CC)))
+    CFLAGS += -mclang -static -nostdlib -fno-pie -mno-red-zone -Wno-implicit-function-declaration
 else
     CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99
 endif
