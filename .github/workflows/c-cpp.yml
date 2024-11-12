@@ -26,5 +26,6 @@ jobs:
           FEATURES: cli
           CC: cosmocc -mclang
           CXX: cosmoc++
+          PLATFORM: cosmo
       run: make
 
