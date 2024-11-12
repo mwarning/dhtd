@@ -18,7 +18,7 @@ jobs:
       with:
         # Cosmopolitan release version
         # Default: latest
-        version: ""
+        version: "latest"
     - name: make
       run: make
 
