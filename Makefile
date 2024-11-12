@@ -1,6 +1,6 @@
 CC ?= gcc 
 ifneq (,$(findstring cosmocc,$(CC)))
-    CFLAGS += -mclang -static -Wall -Wwrite-strings -pedantic -std=gnu99 -Wno-implicit-function-declaration
+    CFLAGS += -mclang -static -Wall -Wwrite-strings -pedantic -std=gnu99 -Wno-implicit-function-declaration -DAF_INET6=10
 else
     CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99
 endif
