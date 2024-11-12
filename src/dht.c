@@ -63,6 +63,11 @@ THE SOFTWARE.
 #endif
 
 #include "dht.h"
+#if defined(AF_INET6)
+    #define AF_INET6_CONST AF_INET6
+#else
+    #define AF_INET6_CONST 0
+#endif
 
 #ifndef HAVE_MEMMEM
 #ifdef __GLIBC__
@@ -84,12 +89,6 @@ extern int dht_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #undef EAFNOSUPPORT
 #define EAFNOSUPPORT WSAEAFNOSUPPORT
-
-#if defined(AF_INET6)
-    #define AF_INET6_CONST AF_INET6
-#else
-    #define AF_INET6_CONST 0
-#endif
 
 static int
 random(void)
