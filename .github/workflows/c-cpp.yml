@@ -24,7 +24,7 @@ jobs:
     - name: cosmocc
       env:
           FEATURES: cli
-          CC: cosmocc
+          CC: cosmocc -mclang
           CXX: cosmoc++
       run: make
 
