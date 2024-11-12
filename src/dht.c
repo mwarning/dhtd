@@ -85,6 +85,12 @@ extern int dht_gettimeofday(struct timeval *tv, struct timezone *tz);
 #undef EAFNOSUPPORT
 #define EAFNOSUPPORT WSAEAFNOSUPPORT
 
+#if defined(AF_INET6)
+    #define AF_INET6_CONST AF_INET6
+#else
+    #define AF_INET6_CONST 0
+#endif
+
 static int
 random(void)
 {
@@ -390,7 +396,7 @@ is_martian(const struct sockaddr *sa)
             (address[0] == 127) ||
             ((address[0] & 0xE0) == 0xE0);
     }
-    case AF_INET6: {
+    case AF_INET6_CONST: {
         struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)sa;
         const unsigned char *address = (const unsigned char*)&sin6->sin6_addr;
         return sin6->sin6_port == 0 ||
@@ -2263,7 +2269,7 @@ dht_periodic(const void *buf, size_t buflen,
                 case AF_INET:
                     m.port = htons(((struct sockaddr_in*)from)->sin_port);
                     break;
-                case AF_INET6:
+                case AF_INET6_CONST:
                     m.port = htons(((struct sockaddr_in6*)from)->sin6_port);
                     break;
                 }
