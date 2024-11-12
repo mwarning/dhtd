@@ -35,7 +35,7 @@ static const char* g_server_usage =
     "Usage:\n"
     "  status\n"
     "  help\n"
-    "  query\n"
+    "  lookup <id>\n"
     "  search <id>\n"
     "  results <id>\n"
     "  announce-start <id>[:<port>]\n"
@@ -52,12 +52,12 @@ static const char* g_server_help =
     "\n"
     "  status\n"
     "    The current state of this node.\n"
+    "  lookup <id>\n"
+    "    Start search and print results.\n"
     "  search <id>\n"
     "    Start a search for announced values.\n"
     "  results <id>\n"
     "    Print the results of a search.\n"
-    "  query <id>\n"
-    "    Start search and print results.\n"
     "  announce-start <id>[:<port>]\n"
     "    Start to announce an id along with a network port.\n"
     "  announce-stop <id>\n"
@@ -100,7 +100,7 @@ enum {
     oPeer,
     oSearch,
     oResults,
-    oQuery,
+    oLookup,
     oStatus,
     oAnnounceStart,
     oAnnounceStop,
@@ -119,7 +119,8 @@ static const option_t g_options[] = {
     {"peer", 2, oPeer},
     {"search", 2, oSearch},
     {"results", 2, oResults},
-    {"query", 2, oQuery},
+    {"lookup", 2, oLookup},
+    {"query", 2, oLookup}, // for backwards compatibility
     {"status", 1, oStatus},
     {"announce-start", 2, oAnnounceStart},
     {"announce-stop", 2, oAnnounceStop},
@@ -159,7 +160,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
 
     // parse identifier
     switch (option->code) {
-        case oSearch: case oResults: case oQuery: case oAnnounceStop:
+        case oSearch: case oResults: case oLookup: case oAnnounceStop:
         if (!parse_id(id, sizeof(id), argv[1], strlen(argv[1]))) {
             fprintf(fp, "Failed to parse identifier.\n");
             return;
@@ -186,7 +187,7 @@ static void cmd_exec(FILE *fp, char request[], bool allow_debug)
         }
         break;
     }
-    case oQuery:
+    case oLookup:
         kad_start_search(NULL, id, 0);
         results_print(fp, id);
         break;

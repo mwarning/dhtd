@@ -56,7 +56,7 @@ DHT blocklist: 3
 DHT traffic: 24.6 G, 6.8 K/s (in) / 68.5 G, 2.5 K/s (out)
 ```
 
-Start a query:
+Start a search:
 
 ```
 $ dhtd-ctl search 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
@@ -83,7 +83,7 @@ $ dhtd-ctl results 6f84758b0ddd8dc05840bf932a77935d8b5b8b93
 Note:
  - Searches/Results are discarded after about 62 minutes.
  - You cannot search for the id of the node itself, only ids that someone announced.
- - Use `query` to start/continue a search and also print out results.
+ - Use `lookup` to start/continue a search and also print out results.
  - Use `--execute <file>` command line argument to execute a script for each result.
 
 ## Command Line Arguments
@@ -139,12 +139,12 @@ List of commands that can be send to a running `dhtd` instance via the command l
 
 * `status`  
   The current state of this node.
+* `lookup <id>`  
+  Start search and print results.
 * `search <id>`  
   Start a search for announced values.
 * `results <id>`  
   Print the results of a search.
-* `query <id>`  
-  Start search and print results.
 * `announce-start <id>[:<port>]`  
   Start to announce an id along with a network port.
 * `announce-stop <id>`  
