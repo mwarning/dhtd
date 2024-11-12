@@ -2269,7 +2269,7 @@ dht_periodic(const void *buf, size_t buflen,
                 case AF_INET:
                     m.port = htons(((struct sockaddr_in*)from)->sin_port);
                     break;
-                case AF_INET6:
+                case AF_INET6_CONST:
                     m.port = htons(((struct sockaddr_in6*)from)->sin6_port);
                     break;
                 }
