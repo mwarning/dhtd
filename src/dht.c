@@ -105,7 +105,7 @@ extern const char *inet_ntop(int, const void *, char *, socklen_t);
 
 /* We set sin_family to 0 to mark unused slots. */
 #if AF_INET == 0 || AF_INET6 == 0
-#error You lose */ 
+/* #error You lose */
 #endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
