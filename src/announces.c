@@ -61,13 +61,13 @@ void announces_print(FILE *fp)
                 fprintf(fp, "  refresh: wait\n");
             }
         } else {
-            fprintf(fp, "  refresh: in %ld min\n", (value->refresh - now) / 60);
+            fprintf(fp, "  refresh: in %d min\n", (int) ((value->refresh - now) / 60));
         }
 
         if (value->lifetime == LONG_MAX) {
             fprintf(fp, "  lifetime: entire runtime\n");
         } else {
-            fprintf(fp, "  lifetime: %ld min left\n", (value->lifetime -  now) / 60);
+            fprintf(fp, "  lifetime: %d min left\n", (int) ((value->lifetime -  now) / 60));
         }
 
         value_counter++;
