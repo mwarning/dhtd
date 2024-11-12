@@ -20,6 +20,9 @@
 #include "utils.h"
 #include "net.h"
 
+#ifndef SO_BINDTODEVICE
+    #define SO_BINDTODEVICE false
+#endif
 
 static struct pollfd g_fds[16] = { 0 };
 static net_callback* g_cbs[16] = { NULL };
