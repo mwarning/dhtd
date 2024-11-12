@@ -1,5 +1,10 @@
+CC ?= gcc 
+ifeq ($(CC),cosmocc)
+    CFLAGS += -static -nostdlib -fno-pie -mno-red-zone -Wno-implicit-function-declaration -mclang
+else
+    CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99
+endif
 
-CFLAGS += -Wall -Wwrite-strings -pedantic -std=gnu99
 LDFLAGS += -lc
 FEATURES ?= cli lpd debug
 
