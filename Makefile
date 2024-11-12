@@ -6,7 +6,8 @@ else
 endif
 
 LDFLAGS += -lc
-FEATURES ?= cli lpd debug
+# FEATURES ?= cli lpd debug
+FEATURES ?= cli
 
 OBJS = build/kad.o build/log.o build/results.o \
 	build/conf.o build/net.o build/utils.o \
