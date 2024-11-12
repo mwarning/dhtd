@@ -103,17 +103,9 @@ extern const char *inet_ntop(int, const void *, char *, socklen_t);
 
 #endif
 
-#ifndef AF_INET
-#error "AF_INET not defined; required for IPv4 support"
-#endif
-
-#ifndef AF_INET6
-#error "AF_INET6 not defined; required for IPv6 support"
-#endif
-
 /* We set sin_family to 0 to mark unused slots. */
 #if AF_INET == 0 || AF_INET6 == 0
-/* Skip #error You lose */ 
+#error You lose */ 
 #endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
