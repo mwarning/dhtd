@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Cosmo Releaser
 
 on:
   workflow_dispatch:
