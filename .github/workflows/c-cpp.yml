@@ -22,5 +22,6 @@ jobs:
     - name: cosmocc
       env:
           CC: cosmocc
+          FEATURES: cli
       run: make
 
