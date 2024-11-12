@@ -15,8 +15,12 @@ jobs:
     - uses: bjia56/setup-cosmocc@main
       with:
         version: "latest"
-    - name: make
-      run: make
+    - name: cosmocc
+      env:
+          FEATURES: cli
+          CC: cosmocc
+          CXX: cosmoc++
+          PLATFORM: cosmo
     - name: Upload release
       if: github.event_name != 'pull_request'
       uses: boxpositron/upload-multiple-releases@1.0.7
