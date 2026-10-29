@@ -40,7 +40,7 @@ Run DHTd in background:
 $ dhtd --daemon --peer bttracker.debian.org:6881 --peer router.bittorrent.com:6881
 ```
 
-Example output after a few minutes:
+Example status output:
 
 ```
 $ dhtd-ctl status
