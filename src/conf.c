@@ -206,7 +206,7 @@ static bool conf_port(const char opt[], int *dst, const char src[])
         return false;
     }
 
-    if (*dst >= 0) {
+    if (*dst != -1) {
         log_error("Value was already set for %s: %s", opt, src);
         return false;
     }
@@ -409,6 +409,10 @@ bool conf_load(void)
     uint8_t id[SHA1_BIN_LENGTH];
     int port;
 
+    if (gconf->dht_port == -1) {
+        gconf->dht_port = DHT_PORT;
+    }
+
     for (size_t i = 0; g_announce_args[i]; i += 1) {
         const char* arg = g_announce_args[i];
 
@@ -429,7 +433,7 @@ static struct gconf_t *conf_alloc(void)
 
     struct gconf_t *conf = (struct gconf_t*) calloc(1, sizeof(struct gconf_t));
     *conf = ((struct gconf_t) {
-        .dht_port = DHT_PORT,
+        .dht_port = -1,
         .af = AF_UNSPEC,
 #ifdef DEBUG
         .verbosity = VERBOSITY_DEBUG,
